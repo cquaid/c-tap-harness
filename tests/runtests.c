@@ -101,6 +101,8 @@
 /* sys/time.h must be included before sys/resource.h on some platforms. */
 #include <sys/resource.h>
 
+#include "log.h"
+
 /* AIX doesn't have WCOREDUMP. */
 #ifndef WCOREDUMP
 # define WCOREDUMP(status)      ((unsigned)(status) & 0x80)
@@ -186,6 +188,7 @@ Options:\n\
     -l <list>           Take the list of tests to run from <test-list>\n\
     -o                  Run a single test rather than a list of tests\n\
     -s <source-dir>     Set the source directory to <source-dir>\n\
+    -L <log-path>       Log test ouput to <log-path>\n\
 \n\
 runtests normally runs each test listed on the command line.  With the -l\n\
 option, it instead runs every test listed in a file.  With the -o option,\n\
@@ -552,6 +555,10 @@ test_checkline(const char *line, struct testset *ts)
     /* Before anything, check for a test abort. */
     bail = strstr(line, "Bail out!");
     if (bail != NULL) {
+		/* line is not guarnateed to be \n terminated here,
+		 * so writeln. Logging here so the line isn't
+		 * modified yet. */
+		log_writeln(line);
         bail = skip_whitespace(bail + strlen("Bail out!"));
         if (*bail != '\0') {
             size_t length;
@@ -571,8 +578,16 @@ test_checkline(const char *line, struct testset *ts)
      * If the given line isn't newline-terminated, it was too big for an
      * fgets(), which means ignore it.
      */
-    if (line[strlen(line) - 1] != '\n')
-        return;
+    if (line[strlen(line) - 1] != '\n') {
+		/* All output needs to be logged,
+		 * even if it's ignored. */
+        log_writeln(line);
+	    return;
+	}
+
+	/* line is newline terminated, so print without appending one.
+	 * use format so the print is safe. */
+	log_write("%s", line);
 
     /* If the line begins with a hash mark, ignore it. */
     if (line[0] == '#')
@@ -1303,12 +1318,13 @@ main(int argc, char *argv[])
     const char *source = SOURCE;
     const char *build = BUILD;
 	const char *name = NULL;
+	const char *logname = NULL;
     struct testlist *tests;
 
 	/* store off program name for usage statements */
 	name = argv[0];
 
-    while ((option = getopt(argc, argv, "b:hl:os:")) != EOF) {
+    while ((option = getopt(argc, argv, "b:hl:os:L:")) != EOF) {
         switch (option) {
         case 'b':
             build = optarg;
@@ -1326,6 +1342,9 @@ main(int argc, char *argv[])
         case 's':
             source = optarg;
             break;
+		case 'L':
+			logname = optarg;
+			break;
         default:
             exit(1);
         }
@@ -1351,6 +1370,11 @@ main(int argc, char *argv[])
             sysdie("cannot set BUILD in the environment");
     }
 
+	if (logname != NULL) {
+		if (log_open(logname) == 0)
+			sysdie("cannot open log file: %s", logname);
+	}
+
     /* Run the tests as instructed. */
     if (single)
         test_single(argv[0], source, build);
@@ -1367,6 +1391,11 @@ main(int argc, char *argv[])
         tests = build_test_list(argv, argc);
         status = test_batch(tests, source, build) ? 0 : 1;
     }
+
+	/* Clean up the log,
+	 * We don't need to check if we've opened a log here,
+	 * log_close checks for us. */
+	log_close();
 
     /* For valgrind cleanliness, free all our memory. */
     if (source_env != NULL) {
