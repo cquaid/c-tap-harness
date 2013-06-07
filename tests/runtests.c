@@ -191,7 +191,7 @@ Options:\n\
     -s <source-dir>     Set the source directory to <source-dir>\n\
     -L <log-path>       Log test ouput to <log-path>\n\
     -v                  Verbose\n\
-	-e                  Capture test stderr\n\
+    -e                  Capture test stderr\n\
 \n\
 runtests normally runs each test listed on the command line.  With the -l\n\
 option, it instead runs every test listed in a file.  With the -o option,\n\
@@ -431,15 +431,15 @@ test_start(const char *path, int *fd)
     } else if (child == 0) {
         /* In child.  Set up our stdout and stderr. */
         if (capture_stderr) {
-			if (dup2(fds[1], 2) == -1)
-				_exit(CHILDERR_DUP);
-		} else {
-			errfd = open("/dev/null", O_WRONLY);
-			if (errfd < 0)
-			    _exit(CHILDERR_STDERR);
-			if (dup2(errfd, 2) == -1)
-			    _exit(CHILDERR_DUP);
-		}
+            if (dup2(fds[1], 2) == -1)
+                _exit(CHILDERR_DUP);
+        } else {
+            errfd = open("/dev/null", O_WRONLY);
+            if (errfd < 0)
+                _exit(CHILDERR_STDERR);
+            if (dup2(errfd, 2) == -1)
+                _exit(CHILDERR_DUP);
+        }
         close(fds[0]);
         if (dup2(fds[1], 1) == -1)
             _exit(CHILDERR_DUP);
@@ -1439,12 +1439,12 @@ main(int argc, char *argv[])
              * multiple levels of output */
             verbosity++;
             break;
-		case 'e':
-			capture_stderr = 1;
-			break;
+        case 'e':
+            capture_stderr = 1;
+            break;
         default:
-			fprintf(stderr, "Invalid option: %c\n", (char)(option & 0xff));
-			fprintf(stderr, usage_message, name, name, name);
+            fprintf(stderr, "Invalid option: %c\n", (char)(option & 0xff));
+            fprintf(stderr, usage_message, name, name, name);
             exit(1);
         }
     }
