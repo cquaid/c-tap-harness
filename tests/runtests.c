@@ -190,6 +190,7 @@ Options:\n\
     -o                  Run a single test rather than a list of tests\n\
     -s <source-dir>     Set the source directory to <source-dir>\n\
     -L <log-path>       Log test ouput to <log-path>\n\
+    -v                  Verbose\n\
 \n\
 runtests normally runs each test listed on the command line.  With the -l\n\
 option, it instead runs every test listed in a file.  With the -o option,\n\
@@ -207,6 +208,13 @@ test program with runtests -o to see more details.\n\n";
 static const char header[] = "\n\
 Failed Set                 Fail/Total (%) Skip Stat  Failing Tests\n\
 -------------------------- -------------- ---- ----  ------------------------";
+
+/* Verbosity level can be more than just on or off.
+ * The higher the verbosity the more output.
+ * Verbosity levels:
+ *  1+ Show tests as they execute instead of just a count
+ *  3+ Print directives to stdout */
+static int verbosity = 0;
 
 /* Include the file name and line number in malloc failures. */
 #define xcalloc(n, size)  x_calloc((n), (size), __FILE__, __LINE__)
@@ -616,8 +624,11 @@ test_checkline(const char *line, struct testset *ts)
     }
 
     /* If the line begins with a hash mark, ignore it. */
-    if (line[0] == '#')
-        return;
+    if (line[0] == '#') {
+		if (verbosity >= 3)
+			printf("%s", line);
+	    return;
+	}
 
     /* If we haven't yet seen a plan, look for one. */
     if (ts->plan == PLAN_INIT && isdigit((unsigned char)(*line))) {
@@ -708,7 +719,24 @@ test_checkline(const char *line, struct testset *ts)
     }
     ts->current = current;
     ts->results[current - 1] = status;
-    if (isatty(STDOUT_FILENO)) {
+
+	/* in verbose mode, print tests as they complete */
+	if (verbosity >= 1) {
+		char *msg;
+		char *lline;
+		switch (status) {
+			case TEST_PASS: msg = "PASS";       break;
+			case TEST_FAIL: msg = "FAIL";       break;
+			case TEST_SKIP: msg = "SKIP";       break;
+			case TEST_INVALID: msg = "INVALID"; break;
+			default: msg = "UNKNOWN";           break;
+		}
+		lline = (char *)line;
+		/* remove the \n at the end */
+		lline[strlen(lline) - 1] = '\0';
+		printf("  test %lu: %s\t%s\n", current, lline, msg);
+		fflush(stdout);
+	} else if (isatty(STDOUT_FILENO)) {
         test_backspace(ts);
         if (ts->plan == PLAN_PENDING)
             outlen = printf("%lu/?", current);
@@ -1350,7 +1378,7 @@ main(int argc, char *argv[])
     /* store off program name for usage statements */
     name = argv[0];
 
-    while ((option = getopt(argc, argv, "b:hl:os:L:")) != EOF) {
+    while ((option = getopt(argc, argv, "b:hl:os:L:v")) != EOF) {
         switch (option) {
         case 'b':
             build = optarg;
@@ -1371,6 +1399,11 @@ main(int argc, char *argv[])
         case 'L':
             logname = optarg;
             break;
+		case 'v':
+			/* Increase verbosity to support
+			 * multiple levels of output */
+			verbosity++;
+			break;
         default:
             exit(1);
         }

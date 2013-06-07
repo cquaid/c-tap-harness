@@ -22,12 +22,6 @@ Reporting:
 
 Extra Harness Features:
 
- * Support a verbose mode that shows the result of each test as it's
-   running instead of just the test counts.
-
- * Support displaying diagnostic lines (lines beginning with "#") in a
-   verbose mode.
-
  * Support running selected tests under fakeroot, probably by adding a
    parameter in the TESTS file after the test name.
 
