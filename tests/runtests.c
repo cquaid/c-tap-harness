@@ -102,6 +102,7 @@
 #include <sys/resource.h>
 
 #include "log.h"
+#include "pragma.h"
 #include "types.h"
 #include "utils.h"
 
@@ -370,6 +371,66 @@ test_plan(const char *line, struct testset *ts)
     return 1;
 }
 
+/*
+ * Read the pragma and call the associated handler
+ */
+static int
+test_pragma(const char *line, struct testset *ts)
+{
+    int state;
+    struct pragma_hook *ph;
+
+    line = skip_whitespace(line);
+    if (strncmp(line, "pragma", 6))
+        return 0;
+    line = skip_whitespace(line + 6);
+
+    /* Pragmas can either be on (+) or off (-) */
+    switch (*line) {
+        case '+':
+            state = 1;
+            break;
+        case '-':
+            state = 0;
+            break;
+        default:
+            test_backspace(ts);
+            puts("ABORTED (invalid pragma)");
+            ts->aborted = 1;
+            ts->reported = 1;
+            return 1;
+    }
+
+    line += 1;
+    /* if there's no name, it's the end of the list */
+    for (ph = pragma_list ; ph->name != NULL; ++ph) {
+        if (strncmp(line, ph->name, strlen(ph->name)))
+            continue;
+        /* if we found a match, handle */
+        if (ph->handle == NULL)
+            return 0;
+        ph->handle(state);
+        return 1;
+    }
+
+    return 0;
+}
+
+/*
+ * Loop through the pragmas and call their respective check functions
+ */
+static int
+test_check_pragma(const char *line, struct testset *ts)
+{
+    struct pragma_hook *ph;
+
+    for (ph = pragma_list; ph->name != NULL; ++ph) {
+        if (ph->check != NULL) {
+            if (ph->check(line, ts))
+                return 1;
+        }
+    }
+}
 
 /*
  * Given a single line of output from a test, parse it and return the success
@@ -424,7 +485,6 @@ test_checkline(const char *line, struct testset *ts)
      * use format so the print is safe. */
     log_write("%s", line);
 
-
     /* Check for TAP version line.
      * Reporting TAP version < 13 is an error.
      * 13 is the current TAP specification.
@@ -446,6 +506,19 @@ test_checkline(const char *line, struct testset *ts)
             /* Default to 12 if no version is given. */
             ts->tap_version = 12;
         }
+    }
+
+    /* Pragma support added in TAP 13 */
+    if (ts->tap_version >= 13) {
+        /* Check for pragma line */
+        if (test_pragma(line, ts))
+            return;
+        /* Let the pragma functions check
+         * the lines before anything else
+         * since they may parse additional
+         * instructions */
+         if (test_check_pragma(line, ts))
+             return;
     }
 
     /* If the line begins with a hash mark, ignore it. */
