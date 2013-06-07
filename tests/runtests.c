@@ -102,6 +102,7 @@
 #include <sys/resource.h>
 
 #include "log.h"
+#include "pragma.h"
 
 /* AIX doesn't have WCOREDUMP. */
 #ifndef WCOREDUMP
@@ -222,6 +223,13 @@ static int verbosity = 0;
  * When turned on the stderr stream is mixed with the
  * stdout stream so both will be interpreted as TAP commands. */
 static int capture_stderr = 0;
+
+/* The following non-static variables are meant to be settable
+ * from pragmas */
+
+/* When turned on, TAP specification will be enforced.
+ * This is required in TAP 13 */
+int strict = 1;
 
 /* Include the file name and line number in malloc failures. */
 #define xcalloc(n, size)  x_calloc((n), (size), __FILE__, __LINE__)
