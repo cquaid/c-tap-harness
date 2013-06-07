@@ -624,10 +624,10 @@ test_checkline(const char *line, struct testset *ts)
 
     /* If the line begins with a hash mark, ignore it. */
     if (line[0] == '#') {
-		if (verbosity >= 3)
-			printf("%s", line);
-	    return;
-	}
+        if (verbosity >= 3)
+            printf("%s", line);
+        return;
+    }
 
     /* If we haven't yet seen a plan, look for one. */
     if (ts->plan == PLAN_INIT && isdigit((unsigned char)(*line))) {
@@ -696,14 +696,14 @@ test_checkline(const char *line, struct testset *ts)
         line = skip_whitespace(line + 1);
         if (strncasecmp(line, "skip", 4) == 0) {
             status = TEST_SKIP;
-			/* Skip past directive */
-			line += 4;
-		}
+            /* Skip past directive */
+            line += 4;
+        }
         if (strncasecmp(line, "todo", 4) == 0) {
             status = (status == TEST_FAIL) ? TEST_SKIP : TEST_FAIL;
-			/* Skip past directive */
-			line += 4;
-		}
+            /* Skip past directive */
+            line += 4;
+        }
     }
 
     /* Make sure that the test number is in range and not a duplicate. */
@@ -725,30 +725,30 @@ test_checkline(const char *line, struct testset *ts)
     ts->current = current;
     ts->results[current - 1] = status;
 
-	/* in verbose mode, print tests as they complete */
-	if (verbosity >= 1) {
-		char *rslt;
-		char *lline;
-		size_t len;
-		switch (status) {
-			case TEST_PASS: rslt = "PASS"; break;
-			case TEST_FAIL: rslt = "FAIL"; break;
-			case TEST_SKIP: rslt = "SKIP"; break;
-			case TEST_INVALID:
-			default:
-				rslt = "MISSING";
-				break;
-		}
-		lline = (char *)skip_whitespace(line);
-		len = strlen(lline);
-		if (len > 0) {
-			/* remove the \n at the end */
-			lline[strlen(lline) - 1] = '\0';
-			printf("  %3lu %s: %s\n", current, lline, rslt);
-		} else
-			printf("  %3lu: %s\n", current, rslt);
-		fflush(stdout);
-	} else if (isatty(STDOUT_FILENO)) {
+    /* in verbose mode, print tests as they complete */
+    if (verbosity >= 1) {
+        char *rslt;
+        char *lline;
+        size_t len;
+        switch (status) {
+            case TEST_PASS: rslt = "PASS"; break;
+            case TEST_FAIL: rslt = "FAIL"; break;
+            case TEST_SKIP: rslt = "SKIP"; break;
+            case TEST_INVALID:
+            default:
+                rslt = "MISSING";
+                break;
+        }
+        lline = (char *)skip_whitespace(line);
+        len = strlen(lline);
+        if (len > 0) {
+            /* remove the \n at the end */
+            lline[strlen(lline) - 1] = '\0';
+            printf("  %3lu %s: %s\n", current, lline, rslt);
+        } else
+            printf("  %3lu: %s\n", current, rslt);
+        fflush(stdout);
+    } else if (isatty(STDOUT_FILENO)) {
         test_backspace(ts);
         if (ts->plan == PLAN_PENDING)
             outlen = printf("%lu/?", current);
@@ -961,15 +961,15 @@ test_run(unsigned int longest, struct testset *ts)
         test_checkline(buffer, ts);
     if (ferror(output) || ts->plan == PLAN_INIT)
         ts->aborted = 1;
-	/* If verbose, print test name and result */
-	if (verbosity >= 1) {
-		printf("%s", ts->file);
-		for (i = strlen(ts->file); i < longest; i++)
-		    putchar('.');
-	} else {
-		/* Otherwise backspace over numeric results */
-	    test_backspace(ts);
-	}
+    /* If verbose, print test name and result */
+    if (verbosity >= 1) {
+        printf("%s", ts->file);
+        for (i = strlen(ts->file); i < longest; i++)
+            putchar('.');
+    } else {
+        /* Otherwise backspace over numeric results */
+        test_backspace(ts);
+    }
 
     /*
      * Consume the rest of the test output, close the output descriptor,
@@ -1275,11 +1275,11 @@ test_batch(struct testlist *tests, const char *source, const char *build)
 
         /* Print out the name of the test file. */
         fputs(ts->file, stdout);
-		for (i = strlen(ts->file); i < longest; i++)
-			putchar('.');
-		/* If in verbose mode, place a newline */
-		if (verbosity >= 1)
-			putchar('\n');
+        for (i = strlen(ts->file); i < longest; i++)
+            putchar('.');
+        /* If in verbose mode, place a newline */
+        if (verbosity >= 1)
+            putchar('\n');
         if (isatty(STDOUT_FILENO))
             fflush(stdout);
 
@@ -1422,11 +1422,11 @@ main(int argc, char *argv[])
         case 'L':
             logname = optarg;
             break;
-		case 'v':
-			/* Increase verbosity to support
-			 * multiple levels of output */
-			verbosity++;
-			break;
+        case 'v':
+            /* Increase verbosity to support
+             * multiple levels of output */
+            verbosity++;
+            break;
         default:
             exit(1);
         }
