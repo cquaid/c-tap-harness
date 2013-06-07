@@ -191,6 +191,7 @@ Options:\n\
     -s <source-dir>     Set the source directory to <source-dir>\n\
     -L <log-path>       Log test ouput to <log-path>\n\
     -v                  Verbose\n\
+	-e                  Capture test stderr\n\
 \n\
 runtests normally runs each test listed on the command line.  With the -l\n\
 option, it instead runs every test listed in a file.  With the -o option,\n\
@@ -215,6 +216,12 @@ Failed Set                 Fail/Total (%) Skip Stat  Failing Tests\n\
  *  1+ Show tests as they execute instead of just a count
  *  3+ Print directives to stdout */
 static int verbosity = 0;
+
+/* Although not strict TAP, sometimes it's useful
+ * to parse stderr also.
+ * When turned on the stderr stream is mixed with the
+ * stdout stream so both will be interpreted as TAP commands. */
+static int capture_stderr = 0;
 
 /* Include the file name and line number in malloc failures. */
 #define xcalloc(n, size)  x_calloc((n), (size), __FILE__, __LINE__)
@@ -423,11 +430,16 @@ test_start(const char *path, int *fd)
         sysdie("can't fork");
     } else if (child == 0) {
         /* In child.  Set up our stdout and stderr. */
-        errfd = open("/dev/null", O_WRONLY);
-        if (errfd < 0)
-            _exit(CHILDERR_STDERR);
-        if (dup2(errfd, 2) == -1)
-            _exit(CHILDERR_DUP);
+        if (capture_stderr) {
+			if (dup2(fds[1], 2) == -1)
+				_exit(CHILDERR_DUP);
+		} else {
+			errfd = open("/dev/null", O_WRONLY);
+			if (errfd < 0)
+			    _exit(CHILDERR_STDERR);
+			if (dup2(errfd, 2) == -1)
+			    _exit(CHILDERR_DUP);
+		}
         close(fds[0]);
         if (dup2(fds[1], 1) == -1)
             _exit(CHILDERR_DUP);
@@ -1401,7 +1413,7 @@ main(int argc, char *argv[])
     /* store off program name for usage statements */
     name = argv[0];
 
-    while ((option = getopt(argc, argv, "b:hl:os:L:v")) != EOF) {
+    while ((option = getopt(argc, argv, "b:hl:os:L:ve")) != EOF) {
         switch (option) {
         case 'b':
             build = optarg;
@@ -1427,6 +1439,9 @@ main(int argc, char *argv[])
              * multiple levels of output */
             verbosity++;
             break;
+		case 'e':
+			capture_stderr = 1;
+			break;
         default:
             exit(1);
         }
