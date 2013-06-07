@@ -166,7 +166,7 @@ struct testset {
     int status;                 /* The exit status of the test. */
     unsigned int all_skipped;   /* Whether all tests were skipped. */
     char *reason;               /* Why all tests were skipped. */
-	long tap_version;           /* Version of TAP to use. */
+    long tap_version;           /* Version of TAP to use. */
 };
 
 /* Structure to hold a linked list of test sets. */
@@ -470,9 +470,9 @@ test_plan(const char *line, struct testset *ts)
 
     /* If there's no leading '1..' return false. */
     line = skip_whitespace(line);
-	if (strncmp(line, "1..", 3))
-		return 0;
-	line += 3;
+    if (strncmp(line, "1..", 3))
+        return 0;
+    line += 3;
 
     /*
      * Get the count, check it for validity, and initialize the struct.  If we
@@ -556,10 +556,10 @@ test_checkline(const char *line, struct testset *ts)
     /* Before anything, check for a test abort. */
     bail = strstr(line, "Bail out!");
     if (bail != NULL) {
-		/* line is not guarnateed to be \n terminated here,
-		 * so writeln. Logging here so the line isn't
-		 * modified yet. */
-		log_writeln(line);
+        /* line is not guarnateed to be \n terminated here,
+         * so writeln. Logging here so the line isn't
+         * modified yet. */
+        log_writeln(line);
         bail = skip_whitespace(bail + strlen("Bail out!"));
         if (*bail != '\0') {
             size_t length;
@@ -580,40 +580,40 @@ test_checkline(const char *line, struct testset *ts)
      * fgets(), which means ignore it.
      */
     if (line[strlen(line) - 1] != '\n') {
-		/* All output needs to be logged,
-		 * even if it's ignored. */
+        /* All output needs to be logged,
+         * even if it's ignored. */
         log_writeln(line);
-	    return;
-	}
+        return;
+    }
 
-	/* line is newline terminated, so print without appending one.
-	 * use format so the print is safe. */
-	log_write("%s", line);
+    /* line is newline terminated, so print without appending one.
+     * use format so the print is safe. */
+    log_write("%s", line);
 
 
-	/* Check for TAP version line.
-	 * Reporting TAP version < 13 is an error.
-	 * 13 is the current TAP specification.
-	 * This should only be checked as the very first line
-	 * (when tap_version == 0). */
-	if (ts->tap_version == 0) {
-		if (strncmp(line, "TAP version ", 12) == 0) {
-			/* Shift past the TAP version part */
-			line += 12;
-			ts->tap_version = strtol(line, NULL, 10);
-			/* If the TAP version is bad, abort. */
-			if (ts->tap_version < 13) {
-				printf("ABORTED (Invalid TAP version: %ld)\n", ts->tap_version);
-				ts->reported = 1;
-				ts->aborted = 1;
-				return;
-			}
-		} else {
-			/* Default to 12 if no version is given. */
-			ts->tap_version = 12;
-		}
-		return;
-	}
+    /* Check for TAP version line.
+     * Reporting TAP version < 13 is an error.
+     * 13 is the current TAP specification.
+     * This should only be checked as the very first line
+     * (when tap_version == 0). */
+    if (ts->tap_version == 0) {
+        if (strncmp(line, "TAP version ", 12) == 0) {
+            /* Shift past the TAP version part */
+            line += 12;
+            ts->tap_version = strtol(line, NULL, 10);
+            /* If the TAP version is bad, abort. */
+            if (ts->tap_version < 13) {
+                printf("ABORTED (Invalid TAP version: %ld)\n", ts->tap_version);
+                ts->reported = 1;
+                ts->aborted = 1;
+                return;
+            }
+        } else {
+            /* Default to 12 if no version is given. */
+            ts->tap_version = 12;
+        }
+        return;
+    }
 
     /* If the line begins with a hash mark, ignore it. */
     if (line[0] == '#')
@@ -1104,10 +1104,10 @@ read_test_list(const char *filename)
             exit(1);
         }
         buffer[length] = '\0';
-		/* Skip comments. */
+        /* Skip comments. */
         if (buffer[0] == '#')
-			continue;
-		if (current == NULL)
+            continue;
+        if (current == NULL)
             current = listhead;
         else {
             current->next = xmalloc(sizeof(struct testlist));
@@ -1343,12 +1343,12 @@ main(int argc, char *argv[])
     const char *list = NULL;
     const char *source = SOURCE;
     const char *build = BUILD;
-	const char *name = NULL;
-	const char *logname = NULL;
+    const char *name = NULL;
+    const char *logname = NULL;
     struct testlist *tests;
 
-	/* store off program name for usage statements */
-	name = argv[0];
+    /* store off program name for usage statements */
+    name = argv[0];
 
     while ((option = getopt(argc, argv, "b:hl:os:L:")) != EOF) {
         switch (option) {
@@ -1368,9 +1368,9 @@ main(int argc, char *argv[])
         case 's':
             source = optarg;
             break;
-		case 'L':
-			logname = optarg;
-			break;
+        case 'L':
+            logname = optarg;
+            break;
         default:
             exit(1);
         }
@@ -1396,10 +1396,10 @@ main(int argc, char *argv[])
             sysdie("cannot set BUILD in the environment");
     }
 
-	if (logname != NULL) {
-		if (log_open(logname) == 0)
-			sysdie("cannot open log file: %s", logname);
-	}
+    if (logname != NULL) {
+        if (log_open(logname) == 0)
+            sysdie("cannot open log file: %s", logname);
+    }
 
     /* Run the tests as instructed. */
     if (single)
@@ -1418,10 +1418,10 @@ main(int argc, char *argv[])
         status = test_batch(tests, source, build) ? 0 : 1;
     }
 
-	/* Clean up the log,
-	 * We don't need to check if we've opened a log here,
-	 * log_close checks for us. */
-	log_close();
+    /* Clean up the log,
+     * We don't need to check if we've opened a log here,
+     * log_close checks for us. */
+    log_close();
 
     /* For valgrind cleanliness, free all our memory. */
     if (source_env != NULL) {
@@ -1434,3 +1434,5 @@ main(int argc, char *argv[])
     }
     exit(status);
 }
+
+/* vim:ts=4:sw=4:expandtab */

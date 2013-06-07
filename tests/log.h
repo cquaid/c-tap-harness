@@ -7,3 +7,5 @@ extern void log_write(const char *fmt, ...);
 extern void log_writeln(const char *str);
 
 #endif /* _H_LOG */
+
+/* vim:ts=4:sw=4:expandtab */

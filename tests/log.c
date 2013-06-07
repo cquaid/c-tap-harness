@@ -14,65 +14,67 @@ static FILE* logfile = NULL;
 int
 log_open(const char *name)
 {
-	if (logfile != NULL)
-		log_close();
+    if (logfile != NULL)
+        log_close();
 
-	if (strcmp(name, "stdout") == 0) {
-		logfile = stdout;
-		return 1;
-	}
+    if (strcmp(name, "stdout") == 0) {
+        logfile = stdout;
+        return 1;
+    }
 
-	if (strcmp(name, "stderr") == 0) {
-		logfile = stderr;
-		return 1;
-	}
+    if (strcmp(name, "stderr") == 0) {
+        logfile = stderr;
+        return 1;
+    }
 
-	/* Appending in case something else
-	 * creates the log.
-	 * This might be better as an option
-	 * and set with an argument to this
-	 * function. */
-	logfile = fopen(name, "a");
-	return (logfile != NULL);
+    /* Appending in case something else
+     * creates the log.
+     * This might be better as an option
+     * and set with an argument to this
+     * function. */
+    logfile = fopen(name, "a");
+    return (logfile != NULL);
 }
 
 void
 log_close(void)
 {
-	if (logfile == NULL)
-		return;
+    if (logfile == NULL)
+        return;
 
-	if (logfile == stdout)
-		return;
+    if (logfile == stdout)
+        return;
 
-	if (logfile == stderr)
-		return;
+    if (logfile == stderr)
+        return;
 
-	fclose(logfile);
-	logfile = NULL;
+    fclose(logfile);
+    logfile = NULL;
 }
 
 void
 log_write(const char *fmt, ...)
 {
-	va_list vargs;
+    va_list vargs;
 
-	if (logfile == NULL)
-		return;
+    if (logfile == NULL)
+        return;
 
-	va_start(vargs, fmt);
-	vfprintf(logfile, fmt, vargs);
-	va_end(vargs);
+    va_start(vargs, fmt);
+    vfprintf(logfile, fmt, vargs);
+    va_end(vargs);
 
-	fflush(logfile);
+    fflush(logfile);
 }
 
 void
 log_writeln(const char *str)
 {
-	if (logfile == NULL)
-		return;
+    if (logfile == NULL)
+        return;
 
-	fprintf(logfile, "%s\n", str);
-	fflush(logfile);
+    fprintf(logfile, "%s\n", str);
+    fflush(logfile);
 }
+
+/* vim:ts=4:sw=4:expandtab */
