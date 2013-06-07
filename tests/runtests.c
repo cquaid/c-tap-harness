@@ -464,14 +464,11 @@ test_plan(const char *line, struct testset *ts)
     unsigned long i;
     long n;
 
-    /*
-     * Accept a plan without the leading 1.. for compatibility with older
-     * versions of runtests.  This will only be allowed if we've not yet seen
-     * a test result.
-     */
+    /* If there's no leading '1..' return false. */
     line = skip_whitespace(line);
-    if (strncmp(line, "1..", 3) == 0)
-        line += 3;
+	if (strncmp(line, "1..", 3))
+		return 0;
+	line += 3;
 
     /*
      * Get the count, check it for validity, and initialize the struct.  If we
