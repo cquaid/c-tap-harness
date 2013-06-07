@@ -1443,6 +1443,8 @@ main(int argc, char *argv[])
 			capture_stderr = 1;
 			break;
         default:
+			fprintf(stderr, "Invalid option: %c\n", (char)(option & 0xff));
+			fprintf(stderr, usage_message, name, name, name);
             exit(1);
         }
     }
