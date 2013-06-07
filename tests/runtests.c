@@ -102,7 +102,7 @@
 #include <sys/resource.h>
 
 #include "log.h"
-#include "pragma.h"
+#include "utils.h"
 
 /* AIX doesn't have WCOREDUMP. */
 #ifndef WCOREDUMP
@@ -231,145 +231,6 @@ static int capture_stderr = 0;
  * This is required in TAP 13 */
 int strict = 1;
 
-/* Include the file name and line number in malloc failures. */
-#define xcalloc(n, size)  x_calloc((n), (size), __FILE__, __LINE__)
-#define xmalloc(size)     x_malloc((size), __FILE__, __LINE__)
-#define xrealloc(p, size) x_realloc((p), (size), __FILE__, __LINE__)
-#define xstrdup(p)        x_strdup((p), __FILE__, __LINE__)
-
-/*
- * __attribute__ is available in gcc 2.5 and later, but only with gcc 2.7
- * could you use the __format__ form of the attributes, which is what we use
- * (to avoid confusion with other macros).
- */
-#ifndef __attribute__
-# if __GNUC__ < 2 || (__GNUC__ == 2 && __GNUC_MINOR__ < 7)
-#  define __attribute__(spec)   /* empty */
-# endif
-#endif
-
-/*
- * We use __alloc_size__, but it was only available in fairly recent versions
- * of GCC.  Suppress warnings about the unknown attribute if GCC is too old.
- * We know that we're GCC at this point, so we can use the GCC variadic macro
- * extension, which will still work with versions of GCC too old to have C99
- * variadic macro support.
- */
-#if !defined(__attribute__) && !defined(__alloc_size__)
-# if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 3)
-#  define __alloc_size__(spec, args...) /* empty */
-# endif
-#endif
-
-/*
- * LLVM and Clang pretend to be GCC but don't support all of the __attribute__
- * settings that GCC does.  For them, suppress warnings about unknown
- * attributes on declarations.  This unfortunately will affect the entire
- * compilation context, but there's no push and pop available.
- */
-#if !defined(__attribute__) && (defined(__llvm__) || defined(__clang__))
-# pragma GCC diagnostic ignored "-Wattributes"
-#endif
-
-/* Declare internal functions that benefit from compiler attributes. */
-static void sysdie(const char *, ...)
-    __attribute__((__nonnull__, __noreturn__, __format__(printf, 1, 2)));
-static void *x_calloc(size_t, size_t, const char *, int)
-    __attribute__((__alloc_size__(1, 2), __malloc__, __nonnull__));
-static void *x_malloc(size_t, const char *, int)
-    __attribute__((__alloc_size__(1), __malloc__, __nonnull__));
-static void *x_realloc(void *, size_t, const char *, int)
-    __attribute__((__alloc_size__(2), __malloc__, __nonnull__(3)));
-static char *x_strdup(const char *, const char *, int)
-    __attribute__((__malloc__, __nonnull__));
-
-
-/*
- * Report a fatal error, including the results of strerror, and exit.
- */
-static void
-sysdie(const char *format, ...)
-{
-    int oerrno;
-    va_list args;
-
-    oerrno = errno;
-    fflush(stdout);
-    fprintf(stderr, "runtests: ");
-    va_start(args, format);
-    vfprintf(stderr, format, args);
-    va_end(args);
-    fprintf(stderr, ": %s\n", strerror(oerrno));
-    exit(1);
-}
-
-
-/*
- * Allocate zeroed memory, reporting a fatal error and exiting on failure.
- */
-static void *
-x_calloc(size_t n, size_t size, const char *file, int line)
-{
-    void *p;
-
-    n = (n > 0) ? n : 1;
-    size = (size > 0) ? size : 1;
-    p = calloc(n, size);
-    if (p == NULL)
-        sysdie("failed to calloc %lu bytes at %s line %d",
-               (unsigned long) size, file, line);
-    return p;
-}
-
-
-/*
- * Allocate memory, reporting a fatal error and exiting on failure.
- */
-static void *
-x_malloc(size_t size, const char *file, int line)
-{
-    void *p;
-
-    p = malloc(size);
-    if (p == NULL)
-        sysdie("failed to malloc %lu bytes at %s line %d",
-               (unsigned long) size, file, line);
-    return p;
-}
-
-
-/*
- * Reallocate memory, reporting a fatal error and exiting on failure.
- */
-static void *
-x_realloc(void *p, size_t size, const char *file, int line)
-{
-    p = realloc(p, size);
-    if (p == NULL)
-        sysdie("failed to realloc %lu bytes at %s line %d",
-               (unsigned long) size, file, line);
-    return p;
-}
-
-
-/*
- * Copy a string, reporting a fatal error and exiting on failure.
- */
-static char *
-x_strdup(const char *s, const char *file, int line)
-{
-    char *p;
-    size_t len;
-
-    len = strlen(s) + 1;
-    p = malloc(len);
-    if (p == NULL)
-        sysdie("failed to strdup %lu bytes at %s line %d",
-               (unsigned long) len, file, line);
-    memcpy(p, s, len);
-    return p;
-}
-
 
 /*
  * Given a struct timeval, return the number of seconds it represents as a
@@ -399,19 +260,6 @@ static double
 tv_sum(const struct timeval *tv1, const struct timeval *tv2)
 {
     return tv_seconds(tv1) + tv_seconds(tv2);
-}
-
-
-/*
- * Given a pointer to a string, skip any leading whitespace and return a
- * pointer to the first non-whitespace character.
- */
-static const char *
-skip_whitespace(const char *p)
-{
-    while (isspace((unsigned char)(*p)))
-        p++;
-    return p;
 }
 
 
