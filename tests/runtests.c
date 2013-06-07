@@ -620,7 +620,6 @@ test_checkline(const char *line, struct testset *ts)
             /* Default to 12 if no version is given. */
             ts->tap_version = 12;
         }
-        return;
     }
 
     /* If the line begins with a hash mark, ignore it. */
