@@ -42,6 +42,12 @@ Extra Harness Features:
    the generic environment variables that may conflict with other uses of
    the same variables.
 
+ * Support TAP 13 pragma directives
+
+ * Add 'strict' mode for pedantically adhearing to TAP specification.
+
+ * Add inline YAML documentation support.
+
 Documentation:
 
  * Move the integration documentation in README into a separate file in
