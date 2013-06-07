@@ -1302,7 +1302,11 @@ main(int argc, char *argv[])
     const char *list = NULL;
     const char *source = SOURCE;
     const char *build = BUILD;
+	const char *name = NULL;
     struct testlist *tests;
+
+	/* store off program name for usage statements */
+	name = argv[0];
 
     while ((option = getopt(argc, argv, "b:hl:os:")) != EOF) {
         switch (option) {
@@ -1310,7 +1314,7 @@ main(int argc, char *argv[])
             build = optarg;
             break;
         case 'h':
-            printf(usage_message, argv[0], argv[0], argv[0]);
+            printf(usage_message, name, name, name);
             exit(0);
             break;
         case 'l':
@@ -1329,7 +1333,7 @@ main(int argc, char *argv[])
     argv += optind;
     argc -= optind;
     if ((list == NULL && argc < 1) || (list != NULL && argc > 0)) {
-        fprintf(stderr, usage_message, argv[0], argv[0], argv[0]);
+        fprintf(stderr, usage_message, name, name, name);
         exit(1);
     }
 
