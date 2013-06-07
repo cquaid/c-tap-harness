@@ -430,6 +430,8 @@ test_check_pragma(const char *line, struct testset *ts)
                 return 1;
         }
     }
+
+    return 0;
 }
 
 /*
@@ -501,7 +503,7 @@ test_checkline(const char *line, struct testset *ts)
                 ts->reported = 1;
                 ts->aborted = 1;
             }
-			return;
+            return;
         } else {
             /* Default to 12 if no version is given. */
             ts->tap_version = 12;
