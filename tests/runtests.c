@@ -1063,7 +1063,10 @@ read_test_list(const char *filename)
             exit(1);
         }
         buffer[length] = '\0';
-        if (current == NULL)
+		/* Skip comments. */
+        if (buffer[0] == '#')
+			continue;
+		if (current == NULL)
             current = listhead;
         else {
             current->next = xmalloc(sizeof(struct testlist));
