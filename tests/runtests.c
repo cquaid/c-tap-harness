@@ -500,8 +500,8 @@ test_checkline(const char *line, struct testset *ts)
                 printf("ABORTED (Invalid TAP version: %ld)\n", ts->tap_version);
                 ts->reported = 1;
                 ts->aborted = 1;
-                return;
             }
+			return;
         } else {
             /* Default to 12 if no version is given. */
             ts->tap_version = 12;
