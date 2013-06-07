@@ -166,6 +166,7 @@ struct testset {
     int status;                 /* The exit status of the test. */
     unsigned int all_skipped;   /* Whether all tests were skipped. */
     char *reason;               /* Why all tests were skipped. */
+	long tap_version;           /* Version of TAP to use. */
 };
 
 /* Structure to hold a linked list of test sets. */
@@ -588,6 +589,31 @@ test_checkline(const char *line, struct testset *ts)
 	/* line is newline terminated, so print without appending one.
 	 * use format so the print is safe. */
 	log_write("%s", line);
+
+
+	/* Check for TAP version line.
+	 * Reporting TAP version < 13 is an error.
+	 * 13 is the current TAP specification.
+	 * This should only be checked as the very first line
+	 * (when tap_version == 0). */
+	if (ts->tap_version == 0) {
+		if (strncmp(line, "TAP version ", 12) == 0) {
+			/* Shift past the TAP version part */
+			line += 12;
+			ts->tap_version = strtol(line, NULL, 10);
+			/* If the TAP version is bad, abort. */
+			if (ts->tap_version < 13) {
+				printf("ABORTED (Invalid TAP version: %ld)\n", ts->tap_version);
+				ts->reported = 1;
+				ts->aborted = 1;
+				return;
+			}
+		} else {
+			/* Default to 12 if no version is given. */
+			ts->tap_version = 12;
+		}
+		return;
+	}
 
     /* If the line begins with a hash mark, ignore it. */
     if (line[0] == '#')
