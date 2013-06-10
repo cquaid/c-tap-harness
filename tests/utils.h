@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 /* Include the file name and line number in malloc failures. */
 #define xcalloc(n, size)  x_calloc((n), (size), __FILE__, __LINE__)
@@ -158,6 +159,40 @@ skip_whitespace(const char *p)
     while (isspace((unsigned char)(*p)))
         p++;
     return p;
+}
+
+
+/*
+ * This function reads a single line from a file descriptor.
+ * Returns 0 on failure and 1 on success.
+ * The main reason for this is fdopen can leak memory and
+ * typically doing buffered reads on pipe isn't usually
+ * a good idea.
+ */
+static int
+get_line(int fd, char *buffer, int buffer_len)
+{
+    char cbuf[1];
+    int count;
+    int line_done;
+
+    count = 0;
+    line_done = 0;
+
+    /* Leave room for a null terminator. */
+    while ((count < (buffer_len - 1)) && (line_done == 0)) {
+        if (read(fd, cbuf, 1) != 1) {
+            buffer[count] = '\0';
+            return 0;
+        }
+
+        buffer[count++] = cbuf[0];
+        if (cbuf[0] == '\n')
+            line_done = 1;
+    }
+
+    buffer[count] = '\0';
+    return 1;
 }
 
 #endif /* _H_UTILS */

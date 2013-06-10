@@ -436,7 +436,7 @@ test_pragma(const char *line, struct testset *ts)
 
         handled = 0;
         line = skip_whitespace(line + name_len);
-        if (line != ',')
+        if (*line != ',')
             break;
 
         /* there can be whitespace after the comma */
@@ -897,25 +897,23 @@ test_run(unsigned int longest, struct testset *ts)
     pid_t testpid, child;
     int outfd, status;
     unsigned long i;
-    FILE *output;
     char buffer[BUFSIZ];
 
     /* Run the test program. */
     testpid = test_start(ts->path, &outfd);
-    output = fdopen(outfd, "r");
-    if (!output) {
-        puts("ABORTED");
-        fflush(stdout);
-        sysdie("fdopen failed");
-    }
 
     /* Reset all Pragmas each run. */
     test_reset_pragma();
 
     /* Pass each line of output to test_checkline(). */
-    while (!ts->aborted && fgets(buffer, sizeof(buffer), output))
+    while (!ts->aborted) {
+        if (get_line(outfd, buffer, sizeof(buffer))) {
+            ts->aborted = 1;
+            break;
+        }
         test_checkline(buffer, ts);
-    if (ferror(output) || ts->plan == PLAN_INIT)
+    }
+    if (ts->plan == PLAN_INIT)
         ts->aborted = 1;
     /* If verbose, print test name and result */
     if (verbosity >= 1) {
@@ -932,9 +930,9 @@ test_run(unsigned int longest, struct testset *ts)
      * retrieve the exit status, and pass that information to test_analyze()
      * for eventual output.
      */
-    while (fgets(buffer, sizeof(buffer), output))
+    while (get_line(outfd, buffer, sizeof(buffer)))
         ;
-    fclose(output);
+    close(outfd);
     child = waitpid(testpid, &ts->status, 0);
     if (child == (pid_t) -1) {
         if (!ts->reported) {
