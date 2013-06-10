@@ -12,7 +12,7 @@ static FILE* logfile = NULL;
  * returns true on success,
  * false otherwise. */
 int
-log_open(const char *name)
+log_open(const char *name, int append)
 {
     if (logfile != NULL)
         log_close();
@@ -27,12 +27,11 @@ log_open(const char *name)
         return 1;
     }
 
-    /* Appending in case something else
-     * creates the log.
-     * This might be better as an option
-     * and set with an argument to this
-     * function. */
-    logfile = fopen(name, "a");
+    if (append)
+        logfile = fopen(name, "a");
+    else
+        logfile = fopen(name, "w");
+
     return (logfile != NULL);
 }
 

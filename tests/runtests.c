@@ -150,6 +150,7 @@ Options:\n\
     -o                  Run a single test rather than a list of tests\n\
     -s <source-dir>     Set the source directory to <source-dir>\n\
     -L <log-path>       Log test ouput to <log-path>\n\
+    -a                  If -L is specified, open <log-path> in append mode\n\
     -v                  Verbose\n\
     -e                  Capture test stderr\n\
     -p                  Pedantic (strict TAP)\n\
@@ -1308,6 +1309,7 @@ main(int argc, char *argv[])
     int option;
     int status = 0;
     int single = 0;
+    int append = 0;
     char *source_env = NULL;
     char *build_env = NULL;
     const char *shortlist;
@@ -1321,7 +1323,7 @@ main(int argc, char *argv[])
     /* store off program name for usage statements */
     name = argv[0];
 
-    while ((option = getopt(argc, argv, "b:hl:os:L:vep")) != EOF) {
+    while ((option = getopt(argc, argv, "b:hl:os:L:avep")) != EOF) {
         switch (option) {
         case 'b':
             build = optarg;
@@ -1341,6 +1343,9 @@ main(int argc, char *argv[])
             break;
         case 'L':
             logname = optarg;
+            break;
+        case 'a':
+            append = 1;
             break;
         case 'v':
             /* Increase verbosity to support
@@ -1381,7 +1386,7 @@ main(int argc, char *argv[])
     }
 
     if (logname != NULL) {
-        if (log_open(logname) == 0)
+        if (log_open(logname, append) == 0)
             sysdie("cannot open log file: %s", logname);
     }
 
