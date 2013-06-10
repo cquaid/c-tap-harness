@@ -906,13 +906,8 @@ test_run(unsigned int longest, struct testset *ts)
     test_reset_pragma();
 
     /* Pass each line of output to test_checkline(). */
-    while (!ts->aborted) {
-        if (get_line(outfd, buffer, sizeof(buffer))) {
-            ts->aborted = 1;
-            break;
-        }
+    while (!ts->aborted && get_line(outfd, buffer, sizeof(buffer)))
         test_checkline(buffer, ts);
-    }
     if (ts->plan == PLAN_INIT)
         ts->aborted = 1;
     /* If verbose, print test name and result */
