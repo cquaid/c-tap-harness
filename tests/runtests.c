@@ -375,47 +375,82 @@ test_plan(const char *line, struct testset *ts)
 
 /*
  * Read the pragma and call the associated handler
+ * pragmas can also be lists of directives:
+ *  pragma +foo, -bar
+ * or:
+ *  pragma +foo,-bar
+ *
+ * grammar:
+ *  PRAGMA ::= 'pragma' SWITCH IDENT { ',' SWITCH IDENT }
+ *           ;
+ *  SWITCH ::= '+'
+ *           | '-'
+ *           ;
+ *  IDENT  ::= [a-zA-Z0-9_]+
+ *           ;
  */
 static int
 test_pragma(const char *line, struct testset *ts)
 {
     enum pragma_state state;
     struct pragma_hook *ph;
+    size_t name_len;
+    int handled = 0;
 
     line = skip_whitespace(line);
     if (strncmp(line, "pragma", 6))
         return 0;
     line = skip_whitespace(line + 6);
 
-    /* Pragmas can either be on (+) or off (-) */
-    switch (*line) {
-        case '+':
-            state = PRAGMA_ON;
-            break;
-        case '-':
-            state = PRAGMA_OFF;
-            break;
-        default:
-            test_backspace(ts);
-            puts("ABORTED (invalid pragma)");
-            ts->aborted = 1;
-            ts->reported = 1;
-            return 1;
-    }
+    while (*line != '\0') {
+        /* Pragmas can either be on (+) or off (-) */
+        switch (*line) {
+            case '+':
+                state = PRAGMA_ON;
+               break;
+            case '-':
+                state = PRAGMA_OFF;
+               break;
+            default:
+                goto abort;
+        }
 
-    line += 1;
-    /* if there's no name, it's the end of the list */
-    for (ph = pragma_list ; ph->name != NULL; ++ph) {
-        if (strncmp(line, ph->name, strlen(ph->name)))
-            continue;
-        /* if we found a match, handle */
-        if (ph->handle == NULL)
-            return 0;
-        ph->handle(state);
-        return 1;
+        line += 1;
+        /* if there's no name, it's the end of the list */
+        for (ph = pragma_list ; ph->name != NULL; ++ph) {
+            name_len = strlen(ph->name);
+            if (strncmp(line, ph->name, strlen(ph->name)))
+                continue;
+            /* if we found a match, handle */
+            if (ph->handle == NULL) {
+                handled = 1;
+                break;
+            }
+            ph->handle(state);
+            handled = 1;
+            break;
+        }
+
+        if (handled == 0)
+            goto abort;
+
+        handled = 0;
+        line = skip_whitespace(line + name_len);
+        if (line != ',')
+            break;
+
+        /* there can be whitespace after the comma */
+        line = skip_whitespace(line + 1);
     }
 
     return 0;
+
+abort:
+    test_backspace(ts);
+    puts("ABORTED (invalid pragma)");
+    ts->aborted = 1;
+    ts->reported = 1;
+    return 1;
 }
 
 /*
