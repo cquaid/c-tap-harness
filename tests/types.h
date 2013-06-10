@@ -17,6 +17,13 @@ enum plan_status {
     PLAN_FINAL    /* Plan seen after some tests. */
 };
 
+/* State of any given pragma. */
+enum pragma_state {
+    PRAGMA_ON,
+    PRAGMA_OFF,
+    PRAGMA_RESET
+};
+
 /* Structure to hold data for a set of tests. */
 struct testset {
     char *file;                /* The file name of the test.             */

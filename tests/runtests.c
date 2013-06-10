@@ -377,7 +377,7 @@ test_plan(const char *line, struct testset *ts)
 static int
 test_pragma(const char *line, struct testset *ts)
 {
-    int state;
+    enum pragma_state state;
     struct pragma_hook *ph;
 
     line = skip_whitespace(line);
@@ -388,10 +388,10 @@ test_pragma(const char *line, struct testset *ts)
     /* Pragmas can either be on (+) or off (-) */
     switch (*line) {
         case '+':
-            state = 1;
+            state = PRAGMA_ON;
             break;
         case '-':
-            state = 0;
+            state = PRAGMA_OFF;
             break;
         default:
             test_backspace(ts);
@@ -432,6 +432,21 @@ test_check_pragma(const char *line, struct testset *ts)
     }
 
     return 0;
+}
+
+/*
+ * Loop through the pragmas and call their handler functions
+ * with PRAGMA_RESET
+ */
+static void
+test_reset_pragma(void)
+{
+    struct pragma_hook *ph;
+
+    for (ph = pragma_list; ph->name != NULL; ++ph) {
+        if (ph->handle != NULL)
+            ph->handle(PRAGMA_RESET);
+    }
 }
 
 /*
@@ -856,6 +871,9 @@ test_run(unsigned int longest, struct testset *ts)
         fflush(stdout);
         sysdie("fdopen failed");
     }
+
+    /* Reset all Pragmas each run. */
+    test_reset_pragma();
 
     /* Pass each line of output to test_checkline(). */
     while (!ts->aborted && fgets(buffer, sizeof(buffer), output))

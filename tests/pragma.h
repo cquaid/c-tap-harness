@@ -4,7 +4,7 @@
 #include "types.h"
 #include "pragma_strict.h"
 
-typedef void(*pragma_handle_fn)(int);
+typedef void(*pragma_handle_fn)(enum pragma_state);
 typedef int(*pragma_check_fn)(const char*,struct testset*);
 struct pragma_hook {
     const char *name;
