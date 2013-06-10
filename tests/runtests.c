@@ -152,6 +152,7 @@ Options:\n\
     -L <log-path>       Log test ouput to <log-path>\n\
     -v                  Verbose\n\
     -e                  Capture test stderr\n\
+    -p                  Pedantic (strict TAP)\n\
 \n\
 runtests normally runs each test listed on the command line.  With the -l\n\
 option, it instead runs every test listed in a file.  With the -o option,\n\
@@ -188,7 +189,7 @@ static int capture_stderr = 0;
 
 /* When turned on, TAP specification will be enforced.
  * This is required in TAP 13 */
-int strict = 1;
+int strict = 0;
 
 
 /*
@@ -1320,7 +1321,7 @@ main(int argc, char *argv[])
     /* store off program name for usage statements */
     name = argv[0];
 
-    while ((option = getopt(argc, argv, "b:hl:os:L:ve")) != EOF) {
+    while ((option = getopt(argc, argv, "b:hl:os:L:vep")) != EOF) {
         switch (option) {
         case 'b':
             build = optarg;
@@ -1348,6 +1349,9 @@ main(int argc, char *argv[])
             break;
         case 'e':
             capture_stderr = 1;
+            break;
+        case 'p':
+            strict = 1;
             break;
         default:
             fprintf(stderr, "Invalid option: %c\n", (char)(option & 0xff));
