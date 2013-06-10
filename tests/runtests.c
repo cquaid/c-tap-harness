@@ -699,7 +699,7 @@ test_checkline(const char *line, struct testset *ts)
             lline[strlen(lline) - 1] = '\0';
             printf("  %3lu %s: %s\n", current, lline, rslt);
         } else
-            printf("  %3lu: %s\n", current, rslt);
+            printf("  %3lu %s\n", current, rslt);
         fflush(stdout);
     } else if (isatty(STDOUT_FILENO)) {
         test_backspace(ts);
