@@ -395,7 +395,6 @@ test_pragma(const char *line, struct testset *ts)
     enum pragma_state state;
     struct pragma_hook *ph;
     size_t name_len;
-    int handled = 0;
 
     line = skip_whitespace(line);
     if (strncmp(line, "pragma", 6))
@@ -422,19 +421,12 @@ test_pragma(const char *line, struct testset *ts)
             if (strncmp(line, ph->name, strlen(ph->name)))
                 continue;
             /* if we found a match, handle */
-            if (ph->handle == NULL) {
-                handled = 1;
+            if (ph->handle == NULL)
                 break;
-            }
             ph->handle(state);
-            handled = 1;
             break;
         }
 
-        if (handled == 0)
-            goto abort;
-
-        handled = 0;
         line = skip_whitespace(line + name_len);
         if (*line != ',')
             break;
