@@ -498,6 +498,7 @@ test_checkline(const char *line, struct testset *ts)
     enum test_status status = TEST_PASS;
     const char *bail;
     char *end;
+    char *lline;
     long number;
     unsigned long i, current;
     int outlen;
@@ -583,19 +584,20 @@ test_checkline(const char *line, struct testset *ts)
     }
 
     /* If we haven't yet seen a plan, look for one. */
-    if (ts->plan == PLAN_INIT && isdigit((unsigned char)(*line))) {
-        if (!test_plan(line, ts))
-            return;
-    } else if (strncmp(line, "1..", 3) == 0) {
-        if (ts->plan == PLAN_PENDING) {
-            if (!test_plan(line, ts))
+    if (strncmp(line, "1..", 3) == 0) {
+        switch (ts->plan) {
+            case PLAN_INIT:
+            case PLAN_PENDING:
+                if (!test_plan(line, ts))
+                    return;
+                /* At this point we know this is a valid plan */
                 return;
-        } else {
-            test_backspace(ts);
-            puts("ABORTED (multiple plans)");
-            ts->aborted = 1;
-            ts->reported = 1;
-            return;
+            default:
+                test_backspace(ts);
+                puts("ABORTED (multiple plans)");
+                ts->aborted = 1;
+                ts->reported = 1;
+                return;
         }
     }
 
@@ -645,18 +647,15 @@ test_checkline(const char *line, struct testset *ts)
     while (isdigit((unsigned char)(*line)))
         line++;
     line = skip_whitespace(line);
-    if (*line == '#') {
-        line = skip_whitespace(line + 1);
-        if (strncasecmp(line, "skip", 4) == 0) {
+
+    lline = strchr(line, '#');
+    if (lline != NULL) {
+        /* we have a directive */
+        lline = (char *)skip_whitespace(lline + 1);
+        if (strncasecmp(lline, "skip", 4) == 0)
             status = TEST_SKIP;
-            /* Skip past directive */
-            line += 4;
-        }
-        if (strncasecmp(line, "todo", 4) == 0) {
+        else if (strncasecmp(lline, "todo", 4) == 0)
             status = (status == TEST_FAIL) ? TEST_SKIP : TEST_FAIL;
-            /* Skip past directive */
-            line += 4;
-        }
     }
 
     /* Make sure that the test number is in range and not a duplicate. */
@@ -681,7 +680,6 @@ test_checkline(const char *line, struct testset *ts)
     /* in verbose mode, print tests as they complete */
     if (verbosity >= 1) {
         char *rslt;
-        char *lline;
         size_t len;
         switch (status) {
             case TEST_PASS: rslt = "PASS"; break;
