@@ -193,6 +193,17 @@ static int capture_stderr = 0;
 int strict = 0;
 
 
+/* The following fariables are for the SIGCHLD handler
+ * and friends. */
+
+/* PID of the currently running test */
+static pid_t current_child;
+/* testset for the currently running test */
+static struct testset *current_ts;
+/* Flag indicating if the SIGCHLD handler has received
+ * a child exited status. */
+static int child_exited;
+
 /*
  * Given a struct timeval, return the number of seconds it represents as a
  * double.  Use difftime() to convert a time_t to a double.
@@ -889,8 +900,12 @@ test_run(unsigned int longest, struct testset *ts)
     unsigned long i;
     char buffer[BUFSIZ];
 
+    child_exited = 0;
+    current_ts = ts;
+
     /* Run the test program. */
     testpid = test_start(ts->path, &outfd);
+    current_child = testpid;
 
     /* Reset all Pragmas each run. */
     test_reset_pragma();
@@ -918,14 +933,19 @@ test_run(unsigned int longest, struct testset *ts)
     while (get_line(outfd, buffer, sizeof(buffer)))
         ;
     close(outfd);
-    child = waitpid(testpid, &ts->status, 0);
-    if (child == (pid_t) -1) {
-        if (!ts->reported) {
-            puts("ABORTED");
-            fflush(stdout);
+
+    /* If our child hasn't exited, it probably needs to be killed */
+    if (child_exited == 0) {
+        child = waitpid(testpid, &ts->status, 0);
+        if (child == (pid_t) -1) {
+            if (!ts->reported) {
+                puts("ABORTED");
+                fflush(stdout);
+            }
+            sysdie("waitpid for %u failed", (unsigned int) testpid);
         }
-        sysdie("waitpid for %u failed", (unsigned int) testpid);
     }
+
     if (ts->all_skipped)
         ts->aborted = 0;
     status = test_analyze(ts);
@@ -1318,6 +1338,24 @@ test_single(const char *program, const char *source, const char *build)
 
 
 /*
+ * Call waitpid on a child when SIGCHLD is received.
+ */
+static void
+handle_sigchld(int sig)
+{
+    pid_t child;
+
+    /* sig unused */
+    (void)sig;
+
+    child = waitpid(current_child, &current_ts->status, WNOHANG);
+    if (child > 0 && WIFEXITED(current_ts->status))
+        child_exited = 1;
+    else if (child == (pid_t)(-1))
+        perror("waipid()");
+}
+
+/*
  * Main routine.  Set the SOURCE and BUILD environment variables and then,
  * given a file listing tests, run each test listed.
  */
@@ -1407,6 +1445,9 @@ main(int argc, char *argv[])
         if (log_open(logname, append) == 0)
             sysdie("cannot open log file: %s", logname);
     }
+
+    /* Handle SIGCHLD signals */
+    signal(SIGCHLD, &handle_sigchld);
 
     /* Run the tests as instructed. */
     if (single)
