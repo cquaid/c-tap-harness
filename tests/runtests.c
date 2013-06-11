@@ -248,17 +248,17 @@ test_start(const char *path, int *fd)
     } else if (child == 0) {
         /* In child.  Set up our stdout and stderr. */
         if (capture_stderr) {
-            if (dup2(fds[1], 2) == -1)
+            if (dup2(fds[1], STDERR_FILENO) == -1)
                 _exit(CHILDERR_DUP);
         } else {
             errfd = open("/dev/null", O_WRONLY);
             if (errfd < 0)
                 _exit(CHILDERR_STDERR);
-            if (dup2(errfd, 2) == -1)
+            if (dup2(errfd, STDERR_FILENO) == -1)
                 _exit(CHILDERR_DUP);
         }
         close(fds[0]);
-        if (dup2(fds[1], 1) == -1)
+        if (dup2(fds[1], STDOUT_FILENO) == -1)
             _exit(CHILDERR_DUP);
 
         /* Now, exec our process. */
