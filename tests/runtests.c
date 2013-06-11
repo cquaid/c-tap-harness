@@ -268,12 +268,15 @@ test_start(const char *path, int *fd)
             if (dup2(errfd, STDERR_FILENO) == -1)
                 _exit(CHILDERR_DUP);
         }
-        close(fds[0]);
+
         if (dup2(fds[1], STDOUT_FILENO) == -1)
             _exit(CHILDERR_DUP);
 
+        close(fds[0]);
+        close(fds[1]);
+
         /* Now, exec our process. */
-        if (execl(path, path, (char *) 0) == -1)
+        if (execl(path, path, (char *)NULL) == -1)
             _exit(CHILDERR_EXEC);
     } else {
         /* In parent.  Close the extra file descriptor. */
@@ -422,14 +425,18 @@ test_pragma(const char *line, struct testset *ts)
                 state = PRAGMA_OFF;
                break;
             default:
-                goto abort;
+                test_backspace(ts);
+                puts("ABORTED (invalid pragma)");
+                ts->aborted = 1;
+                ts->reported = 1;
+                return 1;
         }
 
         line += 1;
         /* if there's no name, it's the end of the list */
         for (ph = pragma_list ; ph->name != NULL; ++ph) {
             name_len = strlen(ph->name);
-            if (strncmp(line, ph->name, strlen(ph->name)))
+            if (strcmp(line, ph->name))
                 continue;
             /* if we found a match, handle */
             if (ph->handle == NULL)
@@ -447,13 +454,6 @@ test_pragma(const char *line, struct testset *ts)
     }
 
     return 0;
-
-abort:
-    test_backspace(ts);
-    puts("ABORTED (invalid pragma)");
-    ts->aborted = 1;
-    ts->reported = 1;
-    return 1;
 }
 
 /*
@@ -1351,8 +1351,10 @@ handle_sigchld(int sig)
     child = waitpid(current_child, &current_ts->status, WNOHANG);
     if (child > 0 && WIFEXITED(current_ts->status))
         child_exited = 1;
-    else if (child == (pid_t)(-1))
-        perror("waipid()");
+    else if (child == (pid_t)(-1)) {
+        /* perror("waipid()"); */
+        child_exited = 1;
+    }
 }
 
 /*
