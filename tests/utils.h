@@ -9,6 +9,9 @@
 #include <string.h>
 #include <unistd.h>
 
+/* Maximum iterations for the get_line function if the nonblocking option is set. */
+#define MAX_ITER (20)
+
 /* Include the file name and line number in malloc failures. */
 #define xcalloc(n, size)  x_calloc((n), (size), __FILE__, __LINE__)
 #define xmalloc(size)     x_malloc((size), __FILE__, __LINE__)
@@ -78,7 +81,7 @@ sysdie(const char *format, ...)
     vfprintf(stderr, format, args);
     va_end(args);
     fprintf(stderr, ": %s\n", strerror(oerrno));
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
 
@@ -167,28 +170,67 @@ skip_whitespace(const char *p)
  * Returns 0 on failure and 1 on success.
  * The main reason for this is fdopen can leak memory and
  * typically doing buffered reads on pipe isn't usually
- * a good idea.
+ * a good idea since fdopen leaks resources on RHEL 4 variants.
+ *
+ * We expect fd to be opened Non-blocking so we have a count
+ * controlled maximum re-trys to exit out if we're "blocking"
+ * for too long.
+ *
+ * Returns 0 when the pipe closes/end of read
+ * Returns 1 if successfully read a line and there's more
+ *  to read
+ * Returns -1 if there's an error
  */
 static int
 get_line(int fd, char *buffer, int buffer_len)
 {
     char cbuf[1];
     int count;
+    int iter;
     int line_done;
+    int ret;
 
+    iter = 0;
     count = 0;
     line_done = 0;
 
     /* Leave room for a null terminator. */
     while ((count < (buffer_len - 1)) && (line_done == 0)) {
-        if (read(fd, cbuf, 1) != 1) {
-            buffer[count] = '\0';
-            return 0;
+        ret = read(fd, cbuf, 1);
+        switch (ret) {
+            case -1:
+                /* Both of these can be returned
+                 * if the read would block.
+                 * Depends on which posix version. */
+                if (errno == EAGAIN
+                    || errno == EWOULDBLOCK) {
+                    if (iter < MAX_ITER) {
+                        ++iter;
+                        sleep(1);
+                        continue;
+                    }
+                    /* If we've looped enough just return */
+                    buffer[count] = '\0';
+                    return 0;
+                }
+                /* For all other errors, return -1 */
+                buffer[count] = '\0';
+                return -1;
+            case 0:
+                /* EOF reached */
+                buffer[count] = '\0';
+                return 0;
+            default:
+                break;
         }
 
         buffer[count++] = cbuf[0];
         if (cbuf[0] == '\n')
             line_done = 1;
+
+        /* Reset the counter if we manage to read something. */
+        if (iter != 0)
+            iter = 0;
     }
 
     buffer[count] = '\0';

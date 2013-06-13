@@ -273,7 +273,6 @@ test_start(const char *path, int *fd)
             _exit(CHILDERR_DUP);
 
         close(fds[0]);
-        close(fds[1]);
 
         /* Now, exec our process. */
         if (execl(path, path, (char *)NULL) == -1)
@@ -896,7 +895,7 @@ static int
 test_run(unsigned int longest, struct testset *ts)
 {
     pid_t testpid, child;
-    int outfd, status;
+    int outfd, status, ret;
     unsigned long i;
     char buffer[BUFSIZ];
 
@@ -910,9 +909,29 @@ test_run(unsigned int longest, struct testset *ts)
     /* Reset all Pragmas each run. */
     test_reset_pragma();
 
+    /* Get current flags */
+    ret = fcntl(outfd, F_GETFL);
+    if (ret == -1)
+        sysdie("fcntl(F_GETFL)");
+
+    /* Set the read pipe to non-blocking mode */
+    if (fcntl(outfd, F_SETFL, ret | O_NONBLOCK) == -1)
+        sysdie("fcntl(F_SETFL)");
+
     /* Pass each line of output to test_checkline(). */
-    while (!ts->aborted && get_line(outfd, buffer, sizeof(buffer)))
-        test_checkline(buffer, ts);
+    while (!ts->aborted) {
+        ret = get_line(outfd, buffer, sizeof(buffer));
+        if (ret == 0) {
+            /* 0 means end of pipe but there still might
+             * be a test line to check. */
+            test_checkline(buffer, ts);
+            break;
+        } else if (ret < 0) {
+            /* Some error occured, exit loop */
+            break;
+        } else
+            test_checkline(buffer, ts);
+    }
     if (ts->plan == PLAN_INIT)
         ts->aborted = 1;
     /* If verbose, print test name and result */
@@ -930,7 +949,7 @@ test_run(unsigned int longest, struct testset *ts)
      * retrieve the exit status, and pass that information to test_analyze()
      * for eventual output.
      */
-    while (get_line(outfd, buffer, sizeof(buffer)))
+    while (!child_exited && (get_line(outfd, buffer, sizeof(buffer)) > 0))
         ;
     close(outfd);
 
@@ -1108,7 +1127,7 @@ read_test_list(const char *filename)
         length = strlen(buffer) - 1;
         if (buffer[length] != '\n') {
             fprintf(stderr, "%s:%u: line too long\n", filename, line);
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         buffer[length] = '\0';
         /* Skip comments. */
@@ -1351,10 +1370,6 @@ handle_sigchld(int sig)
     child = waitpid(current_child, &current_ts->status, WNOHANG);
     if (child > 0 && WIFEXITED(current_ts->status))
         child_exited = 1;
-    else if (child == (pid_t)(-1)) {
-        /* perror("waipid()"); */
-        child_exited = 1;
-    }
 }
 
 /*
@@ -1388,7 +1403,7 @@ main(int argc, char *argv[])
             break;
         case 'h':
             printf(usage_message, name, name, name);
-            exit(0);
+            exit(EXIT_SUCCESS);
             break;
         case 'l':
             list = optarg;
@@ -1419,14 +1434,14 @@ main(int argc, char *argv[])
         default:
             fprintf(stderr, "Invalid option: %c\n", (char)(option & 0xff));
             fprintf(stderr, usage_message, name, name, name);
-            exit(1);
+            exit(EXIT_FAILURE);
         }
     }
     argv += optind;
     argc -= optind;
     if ((list == NULL && argc < 1) || (list != NULL && argc > 0)) {
         fprintf(stderr, usage_message, name, name, name);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     /* Set SOURCE and BUILD environment variables. */
