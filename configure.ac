@@ -20,6 +20,7 @@ AM_PROG_CC_C_O
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 AC_PROG_LN_S
+AM_PROG_AR
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([tests/harness/env/env.t], [chmod +x tests/harness/env/env.t])

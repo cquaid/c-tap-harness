@@ -75,7 +75,10 @@ EXTRA_DIST = .gitignore LICENSE autogen docs/api/bail.pod		    \
 # that way they're in the same locations as they are in packages into which
 # they're copied, which simplifies things like include paths.
 bin_PROGRAMS = tests/runtests
-tests_runtests_SOURCES = tests/runtests.c tests/log.c
+tests_runtests_SOURCES = tests/runtests.c tests/log.c tests/log.h \
+						 tests/utils.h tests/types.h tests/pragma.h \
+						 tests/pragma_strict.h
+tests_runtests_CFLAGS  = -I$(srcdir)/tests
 noinst_LIBRARIES = tests/tap/libtap.a
 tests_tap_libtap_a_SOURCES = tests/tap/basic.c tests/tap/basic.h	\
 	tests/tap/float.c tests/tap/float.h tests/tap/macros.h
