@@ -239,4 +239,4 @@ get_line(int fd, char *buffer, int buffer_len)
 
 #endif /* _H_UTILS */
 
-/* vim: set ts=4 sw=4 sts=4 expandtab */
+/* vim: set ts=4 sw=4 sts=4 expandtab: */

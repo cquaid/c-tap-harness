@@ -19,3 +19,5 @@ static struct pragma_hook pragma_list[] = {
 };
 
 #endif /* _H_PRAGMA */
+
+/* vim: set ts=4 sw=4 sts=4 expandtab: */
