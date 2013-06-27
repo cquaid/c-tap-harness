@@ -31,7 +31,7 @@ struct testset {
     enum plan_status plan;     /* The status of our plan.                */
     unsigned long count;       /* Expected count of tests.               */
     unsigned long current;     /* The last seen test number.             */
-    unsigned int length;       /* The length of teh last status message. */
+    unsigned int length;       /* The length of the last status message. */
     unsigned long passed;      /* Count of passing tests.                */
     unsigned long failed;      /* Count of failing tests.                */
     unsigned long skipped;     /* Count of skipped tests (passed).       */

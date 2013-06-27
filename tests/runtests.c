@@ -139,38 +139,40 @@
  * Usage message.  Should be used as a printf format with two arguments: the
  * path to runtests, given twice.
  */
-static const char usage_message[] = "\
-Usage: %s [-b <build-dir>] [-s <source-dir>] <test> ...\n\
-       %s [-b <build-dir>] [-s <source-dir>] -l <test-list>\n\
-       %s -o [-b <build-dir>] [-s <source-dir>] <test>\n\
-\n\
-Options:\n\
-    -b <build-dir>      Set the build directory to <build-dir>\n\
-    -l <list>           Take the list of tests to run from <test-list>\n\
-    -o                  Run a single test rather than a list of tests\n\
-    -s <source-dir>     Set the source directory to <source-dir>\n\
-    -L <log-path>       Log test ouput to <log-path>\n\
-    -a                  If -L is specified, open <log-path> in append mode\n\
-    -v                  Verbose\n\
-    -e                  Capture test stderr\n\
-    -p                  Pedantic (strict TAP)\n\
-\n\
-runtests normally runs each test listed on the command line.  With the -l\n\
-option, it instead runs every test listed in a file.  With the -o option,\n\
-it instead runs a single test and shows its complete output.\n";
+static const char usage_message[] =
+"Usage: %s [-b <build-dir>] [-s <source-dir>] <test> ...\n"
+"       %s [-b <build-dir>] [-s <source-dir>] -l <test-list>\n"
+"       %s -o [-b <build-dir>] [-s <source-dir>] <test>\n"
+"\n"
+"Options:\n"
+"    -b <build-dir>      Set the build directory to <build-dir>\n"
+"    -l <list>           Take the list of tests to run from <test-list>\n"
+"    -o                  Run a single test rather than a list of tests\n"
+"    -s <source-dir>     Set the source directory to <source-dir>\n"
+"    -L <log-path>       Log test ouput to <log-path>\n"
+"    -a                  If -L is specified, open <log-path> in append mode\n"
+"    -v                  Verbose\n"
+"    -e                  Capture test stderr\n"
+"    -p                  Pedantic (strict TAP)\n"
+"\n"
+"runtests normally runs each test listed on the command line.  With the -l\n"
+"option, it instead runs every test listed in a file.  With the -o option,\n"
+"it instead runs a single test and shows its complete output.\n";
 
 /*
  * Header used for test output.  %s is replaced by the file name of the list
  * of tests.
  */
-static const char banner[] = "\n\
-Running all tests listed in %s.  If any tests fail, run the failing\n\
-test program with runtests -o to see more details.\n\n";
+static const char banner[] =
+"\n"
+"Running all tests listed in %s.  If any tests fail, run the failing\n"
+"test program with runtests -o to see more details.\n\n";
 
 /* Header for reports of failed tests. */
-static const char header[] = "\n\
-Failed Set                 Fail/Total (%) Skip Stat  Failing Tests\n\
--------------------------- -------------- ---- ----  ------------------------";
+static const char header[] =
+"\n"
+"Failed Set                 Fail/Total (%) Skip Stat  Failing Tests\n"
+"-------------------------- -------------- ---- ----  ------------------------";
 
 /* Verbosity level can be more than just on or off.
  * The higher the verbosity the more output.
@@ -211,7 +213,7 @@ static int child_exited;
 static double
 tv_seconds(const struct timeval *tv)
 {
-    return difftime(tv->tv_sec, 0) + tv->tv_usec * 1e-6;
+    return difftime(tv->tv_sec, 0) + (double)(tv->tv_usec) * 1e-6;
 }
 
 
@@ -243,8 +245,9 @@ tv_sum(const struct timeval *tv1, const struct timeval *tv2)
 static pid_t
 test_start(const char *path, int *fd)
 {
-    int fds[2], errfd;
     pid_t child;
+    int fds[2];
+    int errfd = -1;
 
     if (pipe(fds) == -1) {
         puts("ABORTED");
@@ -272,7 +275,13 @@ test_start(const char *path, int *fd)
         if (dup2(fds[1], STDOUT_FILENO) == -1)
             _exit(CHILDERR_DUP);
 
+        /* Close child fds */
+        if (errfd != -1)
+            close(errfd);
+
         close(fds[0]);
+        close(fds[1]);
+        log_close();
 
         /* Now, exec our process. */
         if (execl(path, path, (char *)NULL) == -1)
@@ -332,7 +341,7 @@ test_plan(const char *line, struct testset *ts)
      * with a second argument to advance the line pointer past the count to
      * make it simpler to detect the # skip case.
      */
-    n = strtol(line, (char **) &line, 10);
+    n = strtol(line, (char **)(&line), 10);
     if (n == 0) {
         line = skip_whitespace(line);
         if (*line == '#') {
@@ -360,26 +369,26 @@ test_plan(const char *line, struct testset *ts)
         return 0;
     }
     if (ts->plan == PLAN_INIT && ts->allocated == 0) {
-        ts->count = n;
-        ts->allocated = n;
+        ts->count = (unsigned long)n;
+        ts->allocated = (unsigned long)n;
         ts->plan = PLAN_FIRST;
         ts->results = xmalloc(ts->count * sizeof(enum test_status));
         for (i = 0; i < ts->count; i++)
             ts->results[i] = TEST_INVALID;
     } else if (ts->plan == PLAN_PENDING) {
-        if ((unsigned long) n < ts->count) {
+        if ((unsigned long)n < ts->count) {
             test_backspace(ts);
             printf("ABORTED (invalid test number %lu)\n", ts->count);
             ts->aborted = 1;
             ts->reported = 1;
             return 0;
         }
-        ts->count = n;
-        if ((unsigned long) n > ts->allocated) {
-            ts->results = xrealloc(ts->results, n * sizeof(enum test_status));
+        ts->count = (unsigned long)n;
+        if ((unsigned long)n > ts->allocated) {
+            ts->results = xrealloc(ts->results, (size_t)n * sizeof(enum test_status));
             for (i = ts->allocated; i < ts->count; i++)
                 ts->results[i] = TEST_INVALID;
-            ts->allocated = n;
+            ts->allocated = (unsigned long)n;
         }
         ts->plan = PLAN_FINAL;
     }
@@ -519,9 +528,9 @@ test_checkline(const char *line, struct testset *ts)
 
             length = strlen(bail);
             if (bail[length - 1] == '\n')
-                length--;
+                *(char *)(bail + length - 1) = '\0';
             test_backspace(ts);
-            printf("ABORTED (%.*s)\n", (int) length, bail);
+            printf("ABORTED (%s)\n", bail);
             ts->reported = 1;
         }
         ts->aborted = 1;
@@ -615,8 +624,8 @@ test_checkline(const char *line, struct testset *ts)
     errno = 0;
     number = strtol(line, &end, 10);
     if (errno != 0 || end == line)
-        number = ts->current + 1;
-    current = number;
+        number = (long)(ts->current + 1);
+    current = (unsigned long)number;
     if (number <= 0 || (current > ts->count && ts->plan == PLAN_FIRST)) {
         test_backspace(ts);
         printf("ABORTED (invalid test number %lu)\n", current);
@@ -693,7 +702,7 @@ test_checkline(const char *line, struct testset *ts)
 
     /* in verbose mode, print tests as they complete */
     if (verbosity >= 1) {
-        char *rslt;
+        const char *rslt;
         size_t len;
         switch (status) {
             case TEST_PASS: rslt = "PASS"; break;
@@ -742,7 +751,7 @@ test_checkline(const char *line, struct testset *ts)
             outlen = printf("%lu/?", current);
         else
             outlen = printf("%lu/%lu", current, ts->count);
-        ts->length = (outlen >= 0) ? outlen : 0;
+        ts->length = (outlen >= 0) ? (unsigned int)outlen : 0;
         fflush(stdout);
     }
 }
@@ -757,11 +766,11 @@ test_checkline(const char *line, struct testset *ts)
  * chars plus the space needed would go over the limit (use a limit of 0 to
  * disable this).
  */
-static unsigned int
-test_print_range(unsigned long first, unsigned long last, unsigned int chars,
-                 unsigned int limit)
+static unsigned long
+test_print_range(unsigned long first, unsigned long last, unsigned long chars,
+                 unsigned long limit)
 {
-    unsigned int needed = 0;
+    unsigned long needed = 0;
     unsigned long n;
 
     for (n = first; n > 0; n /= 10)
@@ -810,14 +819,14 @@ test_summarize(struct testset *ts, int status)
     unsigned long last = 0;
 
     if (ts->aborted) {
-        fputs("ABORTED", stdout);
+        printf("ABORTED");
         if (ts->count > 0)
             printf(" (passed %lu/%lu)", ts->passed, ts->count - ts->skipped);
     } else {
         for (i = 0; i < ts->count; i++) {
             if (ts->results[i] == TEST_INVALID) {
                 if (missing == 0)
-                    fputs("MISSED ", stdout);
+                    printf("MISSED ");
                 if (first && i == last)
                     last = i + 1;
                 else {
@@ -836,9 +845,9 @@ test_summarize(struct testset *ts, int status)
         for (i = 0; i < ts->count; i++) {
             if (ts->results[i] == TEST_FAIL) {
                 if (missing && !failed)
-                    fputs("; ", stdout);
+                    printf("; ");
                 if (failed == 0)
-                    fputs("FAILED ", stdout);
+                    printf("FAILED ");
                 if (first && i == last)
                     last = i + 1;
                 else {
@@ -853,7 +862,7 @@ test_summarize(struct testset *ts, int status)
         if (first)
             test_print_range(first, last, failed - 1, 0);
         if (!missing && !failed) {
-            fputs(!status ? "ok" : "dubious", stdout);
+            printf("%s", !status ? "ok" : "dubious");
             if (ts->skipped > 0) {
                 if (ts->skipped == 1)
                     printf(" (skipped %lu test)", ts->skipped);
@@ -882,6 +891,7 @@ test_analyze(struct testset *ts)
 {
     if (ts->reported)
         return 0;
+
     if (ts->all_skipped) {
         if (ts->reason == NULL)
             puts("skipped");
@@ -927,11 +937,11 @@ test_analyze(struct testset *ts)
  * false otherwise.
  */
 static int
-test_run(unsigned int longest, struct testset *ts)
+test_run(size_t longest, struct testset *ts)
 {
     pid_t testpid, child;
     int outfd, status, ret;
-    unsigned long i;
+    size_t i;
     char buffer[BUFSIZ];
 
     child_exited = 0;
@@ -1005,7 +1015,7 @@ test_run(unsigned int longest, struct testset *ts)
     status = test_analyze(ts);
 
     /* Convert missing tests to failed tests. */
-    for (i = 0; i < ts->count; i++) {
+    for (i = 0; i < (size_t)ts->count; i++) {
         if (ts->results[i] == TEST_INVALID) {
             ts->failed++;
             ts->results[i] = TEST_FAIL;
@@ -1021,18 +1031,19 @@ static void
 test_fail_summary(const struct testlist *fails)
 {
     struct testset *ts;
-    unsigned int chars;
-    unsigned long i, first, last, total;
+    unsigned long chars;
+    unsigned long i, total;
+    unsigned long first, last;
 
     puts(header);
 
     /* Failed Set                 Fail/Total (%) Skip Stat  Failing (25)
        -------------------------- -------------- ---- ----  -------------- */
-    for (; fails; fails = fails->next) {
+    for (; fails != NULL; fails = fails->next) {
         ts = fails->ts;
         total = ts->count - ts->skipped;
         printf("%-26.26s %4lu/%-4lu %3.0f%% %4lu ", ts->file, ts->failed,
-               total, total ? (ts->failed * 100.0) / total : 0,
+               total, total ? ((double)(ts->failed) * 100.0) / (double)(total) : 0.0,
                ts->skipped);
         if (WIFEXITED(ts->status))
             printf("%4d  ", WEXITSTATUS(ts->status));
@@ -1075,10 +1086,13 @@ is_valid_test(const char *path)
 
     if (access(path, X_OK) < 0)
         return 0;
+
     if (stat(path, &st) < 0)
         return 0;
+
     if (!S_ISREG(st.st_mode))
         return 0;
+
     return 1;
 }
 
@@ -1100,7 +1114,7 @@ find_test(const char *name, const char *source, const char *build)
 {
     char *path;
     const char *bases[3], *suffix, *base;
-    unsigned int i, j;
+    size_t i, j;
     const char *suffixes[3] = { "-t", ".t", "" };
 
     /* Possible base directories. */
@@ -1134,7 +1148,7 @@ find_test(const char *name, const char *source, const char *build)
  * testlist.  Reports an error to standard error and exits if the list of
  * tests cannot be read.
  */
-static struct testlist *
+static struct testlist*
 read_test_list(const char *filename)
 {
     FILE *file;
@@ -1196,7 +1210,8 @@ static struct testlist *
 build_test_list(char *argv[], int argc)
 {
     int i;
-    struct testlist *listhead, *current;
+    struct testlist *current;
+    struct testlist *listhead;
 
     /* Create the initial container list that will hold our results. */
     listhead = xmalloc(sizeof(struct testlist));
@@ -1247,10 +1262,9 @@ free_testset(struct testset *ts)
 static int
 test_batch(struct testlist *tests, const char *source, const char *build)
 {
+    size_t i;
     size_t length;
-    unsigned int i;
-    unsigned int longest = 0;
-    unsigned int count = 0;
+    size_t longest = 0;
     struct testset *ts;
     struct timeval start, end;
     struct rusage stats;
@@ -1258,6 +1272,7 @@ test_batch(struct testlist *tests, const char *source, const char *build)
     struct testlist *failtail = NULL;
     struct testlist *current, *next;
     int succeeded;
+    unsigned long count = 0;
     unsigned long total = 0;
     unsigned long passed = 0;
     unsigned long skipped = 0;
@@ -1276,7 +1291,7 @@ test_batch(struct testlist *tests, const char *source, const char *build)
      * wide the column for printing the current test name will be.
      */
     longest += 2;
-    if (longest % 8)
+    if (longest % 8 != 0)
         longest += 8 - (longest % 8);
 
     /* Start the wall clock timer. */
@@ -1287,12 +1302,14 @@ test_batch(struct testlist *tests, const char *source, const char *build)
         ts = current->ts;
 
         /* Print out the name of the test file. */
-        fputs(ts->file, stdout);
+        printf("%s", ts->file);
         for (i = strlen(ts->file); i < longest; i++)
             putchar('.');
-        /* If in verbose mode, place a newline */
+
+        /* If in verbose mode, place a newline. */
         if (verbosity >= 1)
             putchar('\n');
+
         if (isatty(STDOUT_FILENO))
             fflush(stdout);
 
@@ -1356,10 +1373,10 @@ test_batch(struct testlist *tests, const char *source, const char *build)
         printf(", passed %lu/%lu tests", passed, total);
     }
     else if (failed == 0)
-        fputs("All tests successful", stdout);
+        printf("All tests successful");
     else
         printf("Failed %lu/%lu tests, %.2f%% okay", failed, total,
-               (total - failed) * 100.0 / total);
+               (double)(total - failed) * 100.0 / (double)(total));
     if (skipped != 0) {
         if (skipped == 1)
             printf(", %lu test skipped", skipped);
@@ -1367,11 +1384,12 @@ test_batch(struct testlist *tests, const char *source, const char *build)
             printf(", %lu tests skipped", skipped);
     }
     puts(".");
-    printf("Files=%u,  Tests=%lu", count, total);
+    printf("Files=%lu,  Tests=%lu", count, total);
     printf(",  %.2f seconds", tv_diff(&end, &start));
     printf(" (%.2f usr + %.2f sys = %.2f CPU)\n",
            tv_seconds(&stats.ru_utime), tv_seconds(&stats.ru_stime),
            tv_sum(&stats.ru_utime, &stats.ru_stime));
+
     return (failed == 0 && aborted == 0);
 }
 
@@ -1512,10 +1530,14 @@ main(int argc, char *argv[])
             shortlist++;
         printf(banner, shortlist);
         tests = read_test_list(list);
-        status = test_batch(tests, source, build) ? 0 : 1;
+        status = test_batch(tests, source, build)
+                 ? EXIT_SUCCESS
+                 : EXIT_FAILURE;
     } else {
         tests = build_test_list(argv, argc);
-        status = test_batch(tests, source, build) ? 0 : 1;
+        status = test_batch(tests, source, build)
+                 ? EXIT_SUCCESS
+                 : EXIT_FAILURE;
     }
 
     /* Clean up the log,
