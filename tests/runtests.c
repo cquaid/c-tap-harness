@@ -501,6 +501,7 @@ test_checkline(const char *line, struct testset *ts)
     const char *bail;
     char *end;
     char *lline;
+    char *reason;
     long number;
     unsigned long i, current;
     int outlen;
@@ -652,12 +653,23 @@ test_checkline(const char *line, struct testset *ts)
 
     lline = strchr(line, '#');
     if (lline != NULL) {
+        /* Store the position of '#' for possible replacement */
+        char *oline = lline;
         /* we have a directive */
         lline = (char *)skip_whitespace(lline + 1);
         if (strncasecmp(lline, "skip", 4) == 0)
             status = TEST_SKIP;
         else if (strncasecmp(lline, "todo", 4) == 0)
             status = (status == TEST_FAIL) ? TEST_SKIP : TEST_FAIL;
+
+        /* if skipped, get the reason string
+         * and set the '#' to '\0' */
+        if (status == TEST_SKIP) {
+            /* terminate the string at the start of the SKIP directive */
+            *oline = '\0';
+            /* Grap test reason, +4 to get past (skip|todo) */
+            reason = (char *)skip_whitespace(lline + 4);
+        }
     }
 
     /* Make sure that the test number is in range and not a duplicate. */
@@ -694,12 +706,35 @@ test_checkline(const char *line, struct testset *ts)
         }
         lline = (char *)skip_whitespace(line);
         len = strlen(lline);
-        if (len > 0) {
-            /* remove the \n at the end */
-            lline[strlen(lline) - 1] = '\0';
-            printf("  %3lu %s: %s\n", current, lline, rslt);
-        } else
-            printf("  %3lu %s\n", current, rslt);
+
+        if (status == TEST_SKIP) {
+            size_t rlen;
+            reason = (char *)skip_whitespace(reason);
+            rlen = strlen(reason);
+            if (len > 0) {
+                lline[len - 1] = '\0';
+
+                if (rlen > 0) {
+                    reason[rlen - 1] = '\0';
+                    printf("  %3lu %s: %s (%s)\n",
+                           current, lline, rslt, reason);
+                } else
+                    printf("  %3lu %s: %s\n", current, lline, rslt);
+            } else {
+                if (rlen > 0) {
+                    reason[rlen - 1] = '\0';
+                    printf("  %3lu %s (%s)\n", current, rslt, reason);
+                } else
+                    printf("  %3lu %s\n", current, rslt);
+            }
+        } else {
+            if (len > 0) {
+                /* remove the \n at the end */
+                lline[len - 1] = '\0';
+                printf("  %3lu %s: %s\n", current, lline, rslt);
+            } else
+                printf("  %3lu %s\n", current, rslt);
+        }
         fflush(stdout);
     } else if (isatty(STDOUT_FILENO)) {
         test_backspace(ts);
