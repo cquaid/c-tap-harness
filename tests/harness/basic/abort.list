@@ -2,6 +2,7 @@ fail
 missing
 hup
 segv
+abort
 status
 pass
 abort

@@ -1,2 +1,2 @@
 #!/bin/sh
-echo 0#skip
+echo '1..0#skip'
