@@ -136,30 +136,6 @@
 #define CHILDERR_STDERR 102     /* Couldn't open stderr file. */
 
 /*
- * Usage message.  Should be used as a printf format with two arguments: the
- * path to runtests, given twice.
- */
-static const char usage_message[] =
-"Usage: %s [-b <build-dir>] [-s <source-dir>] <test> ...\n"
-"       %s [-b <build-dir>] [-s <source-dir>] -l <test-list>\n"
-"       %s -o [-b <build-dir>] [-s <source-dir>] <test>\n"
-"\n"
-"Options:\n"
-"    -b <build-dir>      Set the build directory to <build-dir>\n"
-"    -l <list>           Take the list of tests to run from <test-list>\n"
-"    -o                  Run a single test rather than a list of tests\n"
-"    -s <source-dir>     Set the source directory to <source-dir>\n"
-"    -L <log-path>       Log test ouput to <log-path>\n"
-"    -a                  If -L is specified, open <log-path> in append mode\n"
-"    -v                  Verbose\n"
-"    -e                  Capture test stderr\n"
-"    -p                  Pedantic (strict TAP)\n"
-"\n"
-"runtests normally runs each test listed on the command line.  With the -l\n"
-"option, it instead runs every test listed in a file.  With the -o option,\n"
-"it instead runs a single test and shows its complete output.\n";
-
-/*
  * Header used for test output.  %s is replaced by the file name of the list
  * of tests.
  */
@@ -194,8 +170,17 @@ static int capture_stderr = 0;
  * This is required in TAP 13 */
 int strict = 0;
 
+/* When turned on, the read loop for reading from
+ * the child will be blocking (ignoring EAGAIN).
+ */
+int blocking_read = 0;
 
-/* The following fariables are for the SIGCHLD handler
+/* Max wait (blocking) time for the read loop to
+ * obtain anything from the child process.
+ */
+long blocking_time = DEFAULT_MAX_ITER;
+
+/* The following variables are for the SIGCHLD handler
  * and friends. */
 
 /* PID of the currently running test */
@@ -205,6 +190,37 @@ static struct testset *current_ts;
 /* Flag indicating if the SIGCHLD handler has received
  * a child exited status. */
 static int child_exited;
+
+
+/*
+ * Prints the usage message.
+ */
+static void
+usage(FILE *file, const char *name)
+{
+    fprintf(file, "Usage: %s [-b <build-dir>] [-s <source-dir>] <test> ...\n"
+                  "       %s [-b <build-dir>] [-s <source-dir>] -l <test-list>\n"
+                  "       %s -o [-b <build-dir>] [-s <source-dir>] <test>\n"
+                  "\n"
+                  "Options:\n", name, name, name);
+    fprintf(file, "    -b <build-dir>   Set the build directory to <build-dir>\n"
+                  "    -l <list>        Take the list of tests to run from <test-list>\n"
+                  "    -o               Run a single test rather than a list of tests\n"
+                  "    -s <source-dir>  Set the source directory to <source-dir>\n"
+                  "    -L <log-path>    Log test ouput to <log-path>\n"
+                  "    -a               If -L is specified, open <log-path> in append mode\n");
+    fprintf(file, "    -v               Verbose\n"
+                  "    -e               Capture test stderr\n"
+                  "    -p               Pedantic (strict TAP)\n"
+                  "    -B               Blocking read-loop\n"
+                  "    -t <sec>         Set the non-blocking read max wait time to <secs>\n");
+    fprintf(file, "\n"
+                  "runtests normally runs each test listed on the command line.  With the -l\n"
+                  "option, it instead runs every test listed in a file.  With the -o option,\n"
+                  "it instead runs a single test and shows its complete output.\n");
+    fflush(file);
+}
+
 
 /*
  * Given a struct timeval, return the number of seconds it represents as a
@@ -1449,13 +1465,13 @@ main(int argc, char *argv[])
     /* store off program name for usage statements */
     name = argv[0];
 
-    while ((option = getopt(argc, argv, "b:hl:os:L:avep")) != EOF) {
+    while ((option = getopt(argc, argv, "b:hl:os:L:avepBt:")) != EOF) {
         switch (option) {
         case 'b':
             build = optarg;
             break;
         case 'h':
-            printf(usage_message, name, name, name);
+            usage(stdout, name);
             exit(EXIT_SUCCESS);
             break;
         case 'l':
@@ -1484,16 +1500,59 @@ main(int argc, char *argv[])
         case 'p':
             strict = 1;
             break;
+        case 'B':
+            blocking_read = 1;
+            break;
+        case 't':
+            /* Check for a valid time value */
+            {
+                char *endp = NULL;
+
+                errno = 0;
+                blocking_time = strtol(optarg, &endp, 10);
+                if (endp == optarg || *endp != '\0') {
+                    fprintf(stderr, "Invalid time value for "
+                                    "option -t: %s\n", optarg);
+                    usage(stderr, name);
+                    exit(EXIT_FAILURE);
+                }
+
+                if (errno == EINVAL) {
+                    fprintf(stderr, "Invalid time value for "
+                                    "option -t: %s\n", optarg);
+                    usage(stderr, name);
+                    exit(EXIT_FAILURE);
+                }
+
+                if (errno == ERANGE) {
+                    fprintf(stderr, "Time value for option -t "
+                                    "overflows: %s\n", optarg);
+                    usage(stderr, name);
+                    exit(EXIT_FAILURE);
+                }
+
+                if (blocking_time < 0) {
+                    fprintf(stderr, "Time value for option -t "
+                                    "cannot be negative: %s\n", optarg);
+                    usage(stderr, name);
+                    exit(EXIT_FAILURE);
+                }
+
+                /* A blocking_time of zero seems to cause problems--
+                 * SIGPIPE problems--but Don't check for it, it might
+                 * be necessary for someone. */
+            }
+            break;
         default:
             fprintf(stderr, "Invalid option: %c\n", (char)(option & 0xff));
-            fprintf(stderr, usage_message, name, name, name);
+            usage(stderr, name);
             exit(EXIT_FAILURE);
         }
     }
     argv += optind;
     argc -= optind;
     if ((list == NULL && argc < 1) || (list != NULL && argc > 0)) {
-        fprintf(stderr, usage_message, name, name, name);
+        usage(stderr, name);
         exit(EXIT_FAILURE);
     }
 

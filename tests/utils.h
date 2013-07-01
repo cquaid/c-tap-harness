@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 /* Maximum iterations for the get_line function if the nonblocking option is set. */
-#define MAX_ITER (20)
+#define DEFAULT_MAX_ITER (20)
 
 /* Include the file name and line number in malloc failures. */
 #define xcalloc(n, size)  x_calloc((n), (size), __FILE__, __LINE__)
@@ -181,6 +181,11 @@ skip_whitespace(const char *p)
  *  to read
  * Returns -1 if there's an error
  */
+
+/* Both defined in runtests.c */
+extern int blocking_read;
+extern long blocking_time;
+
 static int
 get_line(int fd, char *buffer, int buffer_len)
 {
@@ -204,7 +209,12 @@ get_line(int fd, char *buffer, int buffer_len)
                  * Depends on which posix version. */
                 if (errno == EAGAIN
                     || errno == EWOULDBLOCK) {
-                    if (iter < MAX_ITER) {
+                    if (blocking_read) {
+                        sleep(1);
+                        continue;
+                    }
+
+                    if (iter < blocking_time) {
                         ++iter;
                         sleep(1);
                         continue;
