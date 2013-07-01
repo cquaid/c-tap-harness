@@ -1018,11 +1018,13 @@ test_run(size_t longest, struct testset *ts)
     if (child_exited == 0) {
         child = waitpid(testpid, &ts->status, 0);
         if (child == (pid_t) -1) {
-            if (!ts->reported) {
-                puts("ABORTED");
+            if (!ts->reported && !WIFSIGNALED(ts->status)) {
+                ts->reported = 1;
+                ts->aborted = 1;
+                printf("ABORTED (waitpid for %lu failed: %s)\n",
+                       (unsigned long)testpid, strerror(errno));
                 fflush(stdout);
             }
-            sysdie("waitpid for %u failed", (unsigned int) testpid);
         }
     }
 
