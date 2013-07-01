@@ -191,8 +191,8 @@ get_line(int fd, char *buffer, int buffer_len)
 {
     char cbuf[1];
     int count;
-    int iter;
     int line_done;
+    long iter;
     ssize_t ret;
 
     iter = 0;

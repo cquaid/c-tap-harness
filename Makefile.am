@@ -77,7 +77,7 @@ EXTRA_DIST = .gitignore LICENSE autogen docs/api/bail.pod		    \
 bin_PROGRAMS = tests/runtests
 tests_runtests_SOURCES = tests/runtests.c tests/log.c tests/log.h \
 						 tests/utils.h tests/types.h tests/pragma.h \
-						 tests/pragma_strict.h
+						 tests/pragma_strict.h tests/pragama_readblock.h
 tests_runtests_CFLAGS  = -I$(srcdir)/tests
 noinst_LIBRARIES = tests/tap/libtap.a
 tests_tap_libtap_a_SOURCES = tests/tap/basic.c tests/tap/basic.h	\
