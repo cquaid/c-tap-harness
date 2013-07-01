@@ -40,7 +40,7 @@ handle_readblock(enum pragma_state state)
             break;
         default:
             break;
-    };
+    }
 }
 
 #endif /* _H_READBLOCK */
