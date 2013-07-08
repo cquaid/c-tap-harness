@@ -3,7 +3,6 @@
 
 #include "types.h"
 #include "pragma_strict.h"
-#include "pragma_readblock.h"
 
 typedef void(*pragma_handle_fn)(enum pragma_state);
 typedef int(*pragma_check_fn)(const char*,struct testset*);
@@ -15,7 +14,6 @@ struct pragma_hook {
 
 static struct pragma_hook pragma_list[] = {
     { "strict",    handle_strict,    NULL },
-    { "readblock", handle_readblock, NULL },
     /* end of list */
     { NULL, NULL, NULL }
 };

@@ -170,11 +170,6 @@ static int capture_stderr = 0;
  * This is required in TAP 13 */
 int strict = 0;
 
-/* When turned on, the read loop for reading from
- * the child will be blocking (ignoring EAGAIN).
- */
-int blocking_read = 0;
-
 /* Max wait (blocking) time for the read loop to
  * obtain anything from the child process.
  */
@@ -212,7 +207,6 @@ usage(FILE *file, const char *name)
     fprintf(file, "    -v               Verbose\n"
                   "    -e               Capture test stderr\n"
                   "    -p               Pedantic (strict TAP)\n"
-                  "    -B               Blocking read-loop\n"
                   "    -t <sec>         Set the non-blocking read max wait time to <secs>\n");
     fprintf(file, "\n"
                   "runtests normally runs each test listed on the command line.  With the -l\n"
@@ -1467,7 +1461,7 @@ main(int argc, char *argv[])
     /* store off program name for usage statements */
     name = argv[0];
 
-    while ((option = getopt(argc, argv, "b:hl:os:L:avepBt:")) != EOF) {
+    while ((option = getopt(argc, argv, "b:hl:os:L:avept:")) != EOF) {
         switch (option) {
         case 'b':
             build = optarg;
@@ -1502,10 +1496,7 @@ main(int argc, char *argv[])
         case 'p':
             strict = 1;
             break;
-        case 'B':
-            blocking_read = 1;
-            break;
-        case 't':
+         case 't':
             /* Check for a valid time value */
             {
                 char *endp = NULL;
