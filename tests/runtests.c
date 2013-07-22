@@ -163,6 +163,9 @@ static int verbosity = 0;
  * stdout stream so both will be interpreted as TAP commands. */
 static int capture_stderr = 0;
 
+/* Set O_NOBLOCK on the pipe fd */
+static int noblock = 0;
+
 /* The following non-static variables are meant to be settable
  * from pragmas */
 
@@ -207,6 +210,7 @@ usage(FILE *file, const char *name)
     fprintf(file, "    -v               Verbose\n"
                   "    -e               Capture test stderr\n"
                   "    -p               Pedantic (strict TAP)\n"
+                  "    -n               Make the read loop non-blocking\n"
                   "    -t <sec>         Set the non-blocking read max wait time to <secs>\n");
     fprintf(file, "\n"
                   "runtests normally runs each test listed on the command line.  With the -l\n"
@@ -964,14 +968,16 @@ test_run(size_t longest, struct testset *ts)
     /* Reset all Pragmas each run. */
     test_reset_pragma();
 
-    /* Get current flags */
-    ret = fcntl(outfd, F_GETFL);
-    if (ret == -1)
-        sysdie("fcntl(F_GETFL)");
+    if (noblock) {
+        /* Get current flags */
+        ret = fcntl(outfd, F_GETFL);
+        if (ret == -1)
+            sysdie("fcntl(F_GETFL)");
 
-    /* Set the read pipe to non-blocking mode */
-    if (fcntl(outfd, F_SETFL, ret | O_NONBLOCK) == -1)
-        sysdie("fcntl(F_SETFL)");
+        /* Set the read pipe to non-blocking mode */
+        if (fcntl(outfd, F_SETFL, ret | O_NONBLOCK) == -1)
+            sysdie("fcntl(F_SETFL)");
+    }
 
     /* Pass each line of output to test_checkline(). */
     while (!ts->aborted) {
@@ -1461,7 +1467,7 @@ main(int argc, char *argv[])
     /* store off program name for usage statements */
     name = argv[0];
 
-    while ((option = getopt(argc, argv, "b:hl:os:L:avept:")) != EOF) {
+    while ((option = getopt(argc, argv, "b:hl:os:L:avepnt:")) != EOF) {
         switch (option) {
         case 'b':
             build = optarg;
@@ -1496,7 +1502,10 @@ main(int argc, char *argv[])
         case 'p':
             strict = 1;
             break;
-         case 't':
+        case 'n':
+            noblock = 1;
+            break;
+        case 't':
             /* Check for a valid time value */
             {
                 char *endp = NULL;
